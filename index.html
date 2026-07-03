@@ -43,6 +43,9 @@
   --shadow-2: 0 10px 40px rgba(0,0,0,0.35);
   --nav-h: 74px;
   --topbar-h: 56px;
+  --rank1:      #5B21B6;
+  --rank2:      #1D4ED8;
+  --rank3:      #9A3412;
 }
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body{ margin:0; padding:0; }
@@ -469,6 +472,7 @@ const State = {
     ink:'#0B1220', ink2:'#101A2E', ink3:'#16223B', line:'#233153',
     gold:'#F5B82E', mint:'#2DD4A8', coral:'#FF6B5E', ice:'#6FB7FF',
     rank1:'#5B21B6', rank2:'#1D4ED8', rank3:'#9A3412',
+    tierCLo:'#8C6A4E', tierCHi:'#D9A65C', tierSLo:'#9AAFC9', tierSHi:'#0F5FA8',
     textHi:'#F4F2ED', textMid:'#B8C0D6', textLow:'#71799A',
     btnText:'#21170a', fontBody:'Inter', fontDisplay:'Sora', borderRadius:'16',
     logoText:'E', logoColor:'#F5B82E', systemName:'EMO Agency', systemSub:'Commission & Bonus VJ',
@@ -515,6 +519,13 @@ function applyTheme(t) {
   if(t.rank1)    r.setProperty('--rank1',    t.rank1);
   if(t.rank2)    r.setProperty('--rank2',    t.rank2);
   if(t.rank3)    r.setProperty('--rank3',    t.rank3);
+  if(t.rank1)    r.setProperty('--rank1', t.rank1);
+  if(t.rank2)    r.setProperty('--rank2', t.rank2);
+  if(t.rank3)    r.setProperty('--rank3', t.rank3);
+  if(t.tierCLo)  r.setProperty('--tier-c-lo', t.tierCLo);
+  if(t.tierCHi)  r.setProperty('--tier-c-hi', t.tierCHi);
+  if(t.tierSLo)  r.setProperty('--tier-s-lo', t.tierSLo);
+  if(t.tierSHi)  r.setProperty('--tier-s-hi', t.tierSHi);
   if(t.textHi)   r.setProperty('--text-hi',  t.textHi);
   if(t.textMid)  r.setProperty('--text-mid', t.textMid);
   if(t.textLow)  r.setProperty('--text-low', t.textLow);
@@ -1825,6 +1836,7 @@ function renderAdminSettings(){
     ['line','➖ Border / Line'],['gold','⭐ Primary Accent'],['mint','✅ Secondary (Mint)'],
     ['coral','🔴 Alert / Danger'],['ice','🔵 Info / Link'],
     ['rank1','🥇 ຊື່ VJ ອັນດັບ 1'],['rank2','🥈 ຊື່ VJ ອັນດັບ 2'],['rank3','🥉 ຊື່ VJ ອັນດັບ 3'],
+    ['tierCHi','💎 Tier Badge C (ສີເພັດ)'],['tierSHi','💎 Tier Badge S (ສີເພັດ)'],
     ['textHi','📝 ຕົວໜັງສືຫຼັກ'],['textMid','📝 ຕົວໜັງສືຮອງ'],['textLow','📝 ຕົວໜັງສືເບົາ'],
     ['btnText','🖊️ ສີຕົວໜັງສືປຸ່ມ'],
     ['heroBg1','🟨 Box ໂບນັດ - ພື້ນຫຼັງ 1'],['heroBg2','🟨 Box ໂບນັດ - ພື້ນຫຼັງ 2'],['heroGlow','✨ Box ໂບນັດ - ສີແສງເຫຼືອງ'],
@@ -1921,7 +1933,7 @@ function previewLogoUrl(url) {
 function previewHeroBg(url){ document.documentElement.style.setProperty('--hero-bg-image', url ? `url('${url}')` : 'none'); }
 function clearHeroBg(){ document.getElementById('heroBgImage').value = ''; previewHeroBg(''); toast('ລຶບຮູບພື້ນຫຼັງແລ້ວ (ຍັງບໍ່ໄດ້ບັນທຶກ)','info'); }
 function liveColorPreview(key, val) {
-  const cssMap = { ink:'--ink', ink2:'--ink-2', ink3:'--ink-3', line:'--line', gold:'--gold', mint:'--mint', coral:'--coral', ice:'--ice', rank1:'--rank1', rank2:'--rank2', rank3:'--rank3', textHi:'--text-hi', textMid:'--text-mid', textLow:'--text-low', heroBg1:'--hero-bg1', heroBg2:'--hero-bg2', heroGlow:'--hero-glow' };
+  const cssMap = { ink:'--ink', ink2:'--ink-2', ink3:'--ink-3', line:'--line', gold:'--gold', mint:'--mint', coral:'--coral', ice:'--ice', rank1:'--rank1', rank2:'--rank2', rank3:'--rank3', tierCHi:'--tier-c-hi', tierSHi:'--tier-s-hi', textHi:'--text-hi', textMid:'--text-mid', textLow:'--text-low', heroBg1:'--hero-bg1', heroBg2:'--hero-bg2', heroGlow:'--hero-glow' };
   if(cssMap[key]) document.documentElement.style.setProperty(cssMap[key], val);
 }
 function previewFont(type, val){

@@ -1122,7 +1122,7 @@ function vjRowHtml(vj, idx){
         <span ${vj.photoUrl?'style="display:none"':''}>${initials(vj.bigoId)}</span>
       </div>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${idx===0?'#E9D5FF':idx===1?'#BAE6FD':idx===2?'#FED7AA':'var(--text-hi)'};">${escapeHtml(vj.bigoId)}</div>
+        <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${idx===0?'#5B21B6':idx===1?'#1D4ED8':idx===2?'#B45309':'var(--text-hi)'};">${escapeHtml(vj.bigoId)}</div>
         <div style="font-size:11.5px;color:var(--text-low);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           ${tierBadgeHtml(vj.ticketLevel)}
           <span>${BEAN_IMG} ${fmtInt(vj.sbeans)}</span>

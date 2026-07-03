@@ -20,6 +20,9 @@
   --mint:       #2DD4A8;
   --coral:      #FF6B5E;
   --ice:        #6FB7FF;
+  --rank1:      #5B21B6;
+  --rank2:      #1D4ED8;
+  --rank3:      #9A3412;
   --text-hi:    #F4F2ED;
   --text-mid:   #B8C0D6;
   --text-low:   #71799A;
@@ -465,6 +468,7 @@ const State = {
   theme: JSON.parse(localStorage.getItem('emo_theme') || 'null') || {
     ink:'#0B1220', ink2:'#101A2E', ink3:'#16223B', line:'#233153',
     gold:'#F5B82E', mint:'#2DD4A8', coral:'#FF6B5E', ice:'#6FB7FF',
+    rank1:'#5B21B6', rank2:'#1D4ED8', rank3:'#9A3412',
     textHi:'#F4F2ED', textMid:'#B8C0D6', textLow:'#71799A',
     btnText:'#21170a', fontBody:'Inter', fontDisplay:'Sora', borderRadius:'16',
     logoText:'E', logoColor:'#F5B82E', systemName:'EMO Agency', systemSub:'Commission & Bonus VJ',
@@ -508,6 +512,9 @@ function applyTheme(t) {
   if(t.mint)     r.setProperty('--mint',     t.mint);
   if(t.coral)    r.setProperty('--coral',    t.coral);
   if(t.ice)      r.setProperty('--ice',      t.ice);
+  if(t.rank1)    r.setProperty('--rank1',    t.rank1);
+  if(t.rank2)    r.setProperty('--rank2',    t.rank2);
+  if(t.rank3)    r.setProperty('--rank3',    t.rank3);
   if(t.textHi)   r.setProperty('--text-hi',  t.textHi);
   if(t.textMid)  r.setProperty('--text-mid', t.textMid);
   if(t.textLow)  r.setProperty('--text-low', t.textLow);
@@ -1122,7 +1129,7 @@ function vjRowHtml(vj, idx){
         <span ${vj.photoUrl?'style="display:none"':''}>${initials(vj.bigoId)}</span>
       </div>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${idx===0?'#5B21B6':idx===1?'#1D4ED8':idx===2?'#9A3412':'var(--text-hi)'};">${escapeHtml(vj.bigoId)}</div>
+        <div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${idx===0?'var(--rank1)':idx===1?'var(--rank2)':idx===2?'var(--rank3)':'var(--text-hi)'};">${escapeHtml(vj.bigoId)}</div>
         <div style="font-size:11.5px;color:var(--text-low);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           ${tierBadgeHtml(vj.ticketLevel)}
           <span>${BEAN_IMG} ${fmtInt(vj.sbeans)}</span>
@@ -1817,6 +1824,7 @@ function renderAdminSettings(){
     ['ink','🎨 ພື້ນຫຼັງ (Background)'],['ink2','📦 Card / Surface'],['ink3','📦 Elevated Surface'],
     ['line','➖ Border / Line'],['gold','⭐ Primary Accent'],['mint','✅ Secondary (Mint)'],
     ['coral','🔴 Alert / Danger'],['ice','🔵 Info / Link'],
+    ['rank1','🥇 ຊື່ VJ ອັນດັບ 1'],['rank2','🥈 ຊື່ VJ ອັນດັບ 2'],['rank3','🥉 ຊື່ VJ ອັນດັບ 3'],
     ['textHi','📝 ຕົວໜັງສືຫຼັກ'],['textMid','📝 ຕົວໜັງສືຮອງ'],['textLow','📝 ຕົວໜັງສືເບົາ'],
     ['btnText','🖊️ ສີຕົວໜັງສືປຸ່ມ'],
     ['heroBg1','🟨 Box ໂບນັດ - ພື້ນຫຼັງ 1'],['heroBg2','🟨 Box ໂບນັດ - ພື້ນຫຼັງ 2'],['heroGlow','✨ Box ໂບນັດ - ສີແສງເຫຼືອງ'],
@@ -1913,7 +1921,7 @@ function previewLogoUrl(url) {
 function previewHeroBg(url){ document.documentElement.style.setProperty('--hero-bg-image', url ? `url('${url}')` : 'none'); }
 function clearHeroBg(){ document.getElementById('heroBgImage').value = ''; previewHeroBg(''); toast('ລຶບຮູບພື້ນຫຼັງແລ້ວ (ຍັງບໍ່ໄດ້ບັນທຶກ)','info'); }
 function liveColorPreview(key, val) {
-  const cssMap = { ink:'--ink', ink2:'--ink-2', ink3:'--ink-3', line:'--line', gold:'--gold', mint:'--mint', coral:'--coral', ice:'--ice', textHi:'--text-hi', textMid:'--text-mid', textLow:'--text-low', heroBg1:'--hero-bg1', heroBg2:'--hero-bg2', heroGlow:'--hero-glow' };
+  const cssMap = { ink:'--ink', ink2:'--ink-2', ink3:'--ink-3', line:'--line', gold:'--gold', mint:'--mint', coral:'--coral', ice:'--ice', rank1:'--rank1', rank2:'--rank2', rank3:'--rank3', textHi:'--text-hi', textMid:'--text-mid', textLow:'--text-low', heroBg1:'--hero-bg1', heroBg2:'--hero-bg2', heroGlow:'--hero-glow' };
   if(cssMap[key]) document.documentElement.style.setProperty(cssMap[key], val);
 }
 function previewFont(type, val){

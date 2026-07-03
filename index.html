@@ -1020,6 +1020,14 @@ setTimeout(()=>{
 
       gasCall('getThemeSettings').then(t => { if(t) applyTheme(t); }).catch(()=>{}),
       gasCall('getBannersData').then(b => { if(b){ State.banners = b; startBannerAutoplay(); try{ localStorage.setItem('emo_cache_banners', JSON.stringify(b)); }catch(e){} } }).catch(()=>{}),
+      gasCall('getVjLiveData', null).then(res => {
+        if (res && !res.error) {
+          _vjLiveCache = res.list; State.liveMonths = res.months; State.activeLiveMonth = res.month;
+        }
+      }).catch(()=>{}),
+      gasCall('getNewVjActiveData', null).then(res => {
+        if (res && !res.error) { _newVjActiveCache = res.list; }
+      }).catch(()=>{}),
     ]);
   } catch(err) {
     console.error('init error:', err);
@@ -1973,11 +1981,15 @@ let _vjLiveLoading = false;
 let _vjLiveAutoRefreshTimer = null;
 async function fetchVjLiveData(monthKey) {
   if (_vjLiveLoading) return;
+  if (!_vjLiveCache) {
+    try { _vjLiveCache = JSON.parse(localStorage.getItem('emo_cache_vjlive') || 'null'); } catch(e){}
+  }
   _vjLiveLoading = true;
   try {
     const res = await gasCall('getVjLiveData', monthKey || State.activeLiveMonth || null);
     if (res && !res.error) {
       _vjLiveCache = Array.isArray(res.list) ? res.list : [];
+       try{ localStorage.setItem('emo_cache_vjlive', JSON.stringify(_vjLiveCache)); }catch(e){}
       if (Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
       State.activeLiveMonth = res.month || State.activeLiveMonth;
     } else {

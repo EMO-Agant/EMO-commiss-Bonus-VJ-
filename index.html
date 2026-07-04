@@ -1194,7 +1194,7 @@ function podiumHtml(top3) {
             <img src="https://i.postimg.cc/YSHQ7tBK/Breen.png" style="width:18px;height:18px;object-fit:contain;" onerror="this.outerHTML='https://i.postimg.cc/YSHQ7tBK/Breen.png'">
             <span style="font-family:var(--f-mono);font-weight:700;font-size:12px;color:#fff;">${fmtInt(vj.sbeans)}</span>
           </div>
-          <div style="font-family:var(--f-mono);font-weight:800;font-size:${isFirst?'16px':'13px'};color:${isFirst?'#FFD700':ringColor[i]};text-shadow:0 0 12px ${isFirst?'rgba(255,215,0,0.6)':ringColor[i]+'66'};">$${fmtMoney(vj.bonusVjUSD)}</div>
+          ${State.isAdmin ? `<div style="font-family:var(--f-mono);font-weight:800;font-size:${isFirst?'16px':'13px'};color:${isFirst?'#FFD700':ringColor[i]};text-shadow:0 0 12px ${isFirst?'rgba(255,215,0,0.6)':ringColor[i]+'66'};">$${fmtMoney(vj.bonusVjUSD)}</div>` : ''}
         </div>
       </div>`;
   }

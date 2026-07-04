@@ -1392,7 +1392,7 @@ function renderVjSearchResultsInner(){
           <div class="card" style="padding:8px;">
             ${res.slice().reverse().map(h => `
               <div class="vj-row">
-                <div class="vj-avatar">${ICONS.calendar.replace('width="24" height="24"','width="16" height="16"')}</div>
+                <div class="vj-avatar">📆</div>
                 <div class="vj-info">
                   <div class="name">${escapeHtml(h.label)}</div>
                   <div class="meta">${tierBadgeHtml(h.vj.ticketLevel)} <span>${fmtInt(h.vj.sbeans)} sbeans</span></div>

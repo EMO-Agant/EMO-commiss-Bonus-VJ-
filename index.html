@@ -1104,7 +1104,7 @@ function renderHome(){
     ${top3.length ? podiumHtml(top3) : `<div class="card" style="margin-top:10px;"><div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ VJ ທີ່ໄດ້ໂບນັດເດືອນນີ້</p></div></div>`}
     ${State.isAdmin ? `
     <div class="flex-between" style="margin-top:24px;">
-      <h3 class="display" style="font-size:16px; margin:0;">📅 ປະຫວັດເດືອນ</h3>
+      <h3 class="display" style="font-size:16px; margin:0;">📆 ປະຫວັດເດືອນ</h3>
     </div>
     <div class="card" style="margin-top:10px; padding:8px 8px;">
       ${months.slice().reverse().map(m => monthHistoryRowHtml(m)).join('')}
@@ -1117,7 +1117,7 @@ function monthHistoryRowHtml(m){
   const s = d.summary || {};
   return `
     <div class="vj-row" style="cursor:pointer;" onclick="setView('leaderboard',{month:'${m}'})">
-      <div class="vj-avatar">${ICONS.calendar.replace('width="24" height="24"','width="16" height="16"')}</div>
+      <div class="vj-avatar">📆</div> 
       <div class="vj-info">
         <div class="name">${escapeHtml(d.label)}</div>
         <div class="meta">${fmtInt(s.totalVj)} VJ · Invoice ${escapeHtml(s.invoiceNo||'-')}</div>

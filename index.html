@@ -1100,7 +1100,7 @@ function renderHome(){
     </div>
     ` : ''}
     <div class="flex-between" style="margin-top:24px;">
-      <h3 class="display" style="font-size:16px; margin:0;">🏆 VJ ດີເດັ່ນເດືອນນີ້</h3>
+      <h3 class="display" style="font-size:16px; margin:0;">🏆 VJ ດີເດັ່ນເດືອນທີ່ຜ່ານມາ</h3>
       <button class="chip" onclick="setView('leaderboard')">ເບິ່ງທັງໝົດ ${ICONS.chevron}</button>
     </div>
     ${top3.length ? podiumHtml(top3) : `<div class="card" style="margin-top:10px;"><div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ VJ ທີ່ໄດ້ໂບນັດເດືອນນີ້</p></div></div>`}
@@ -1150,8 +1150,8 @@ function vjRowHtml(vj, idx){
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
-        <div style="font-family:var(--f-mono);font-weight:800;font-size:15px;color:${bonus>0?(idx===0?'#C084FC':idx===1?'#90C9FF':idx===2?'#FF9F7A':'var(--gold)'):'var(--text-low)'};${idx===0&&bonus>0?'text-shadow:0 0 12px rgba(192,132,252,0.5);':''}">$${fmtMoney(vj.bonusVjUSD)}</div>
-        ${bonus>0?`<div style="font-size:10.5px;color:var(--text-low);margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} beans</div>`:''}
+        ${State.isAdmin ? `<div style="font-family:var(--f-mono);font-weight:800;font-size:15px;color:${bonus>0?(idx===0?'#C084FC':idx===1?'#90C9FF':idx===2?'#FF9F7A':'var(--gold)'):'var(--text-low)'};${idx===0&&bonus>0?'text-shadow:0 0 12px rgba(192,132,252,0.5);':''}">$${fmtMoney(vj.bonusVjUSD)}</div>` : ''}
+        ${bonus>0?`<div style="font-family:${State.isAdmin?'inherit':'var(--f-mono)'};font-size:${State.isAdmin?'10.5px':'14.5px'};font-weight:${State.isAdmin?'400':'800'};color:${State.isAdmin?'var(--text-low)':'var(--gold)'};margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} beans</div>`:''}
       </div>
     </div>`;
 }
@@ -1207,7 +1207,7 @@ function podiumHtml(top3) {
         <div style="position:absolute;top:12px;right:35%;font-size:8px;opacity:0.3;">✦</div>
       </div>
       <div style="text-align:center;margin-bottom:14px;position:relative;">
-        <div style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#4F24A6);border:1px solid rgba(196,132,252,0.5);border-radius:30px;padding:6px 20px;font-family:var(--f-display);font-size:15px;font-weight:800;color:#fff;letter-spacing:0.5px;box-shadow:0 4px 20px rgba(124,58,237,0.4);">🏆 VJ ດີເດັ່ນເດືອນນີ້</div>
+        <div style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#4F24A6);border:1px solid rgba(196,132,252,0.5);border-radius:30px;padding:6px 20px;font-family:var(--f-display);font-size:15px;font-weight:800;color:#fff;letter-spacing:0.5px;box-shadow:0 4px 20px rgba(124,58,237,0.4);">🏆 VJ ດີເດັ່ນເດືອນທີ່ຜ່ານມາ</div>
       </div>
       <div style="display:flex;align-items:flex-end;justify-content:center;gap:4px;">
         ${ordered.map((vj, i) => card(vj, i)).join('')}

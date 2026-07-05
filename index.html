@@ -1282,7 +1282,7 @@ function renderBonus(){
           <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:${i===0?'linear-gradient(145deg,var(--gold),#c98f1c)':'linear-gradient(145deg,var(--ink),var(--ink-3))'};border:1px solid ${i===0?'rgba(245,184,46,0.5)':'var(--line)'};display:flex;align-items:center;justify-content:center;font-size:18px;">${i===0?'🥇':'📅'}</div>
           <div style="flex:1; min-width:0;">
             <div style="font-weight:700; font-size:14.5px;">${escapeHtml(h.label)}</div>
-            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>· ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span>></div>
+            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>📅 ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span>></div>
           </div>
           <div style="text-align:right; flex-shrink:0;"><div style="font-family:var(--f-mono); font-weight:800; font-size:16px; color:${i===0?'var(--gold)':'var(--text-hi)'};">$${fmtMoney(h.vj.bonusVjUSD)}</div><div style="font-size:10.5px; color:var(--text-low); margin-top:1px;">+${fmtInt(h.vj.bonusBeansTotal)} beans</div></div>
         </div>`).join('')}
@@ -2133,9 +2133,9 @@ function vjLiveCardHtml(vj) {
         <div style="text-align:right;flex-shrink:0;"><div style="font-family:var(--f-mono);font-weight:700;font-size:15px;color:${gradeColor};">${vj.currentGrade !== '-' ? vj.currentGrade : '—'}</div><div style="font-size:10.5px;color:var(--text-low);">Grade</div></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:var(--gold);">${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">Beans เดือนนี้</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:${hoursColor};">${vj.hoursMonth.toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">ชั่วโมง/${vj.reqHours}h</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:var(--text-mid);">${vj.daysLeft}</div><div style="font-size:10px;color:var(--text-low);">วันเหลือ</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:var(--gold);">${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວເດືອນນີ້</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:${hoursColor};">${vj.hoursMonth.toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">ຊົ່ວໂມງ/${vj.reqHours}h</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:var(--text-mid);">${vj.daysLeft}</div><div style="font-size:10px;color:var(--text-low);">ມື້ທີ່ຍັງເຫຼືອ</div></div>
       </div>
       <div style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">Beans → ${vj.nextGrade !== 'MAX' ? vj.nextGrade : '🏆 MAX'}</span><span style="color:var(--gold);font-weight:600;">${fmtInt(vj.beansMonth)} / ${vj.nextGrade !== 'MAX' ? fmtInt(vj.nextBeanTarget) : '✓'}</span></div>
@@ -2143,12 +2143,12 @@ function vjLiveCardHtml(vj) {
         ${vj.needBeans > 0 ? `<div style="font-size:10.5px;color:var(--coral);margin-top:3px;">⚠️ ຂາດ ${fmtInt(vj.needBeans)} beans ເພື່ອ ${vj.nextGrade}</div>` : vj.nextGrade !== 'MAX' ? '' : `<div style="font-size:10.5px;color:var(--mint);margin-top:3px;">✅ ຮອດ Grade ສູງສຸດແລ້ວ!</div>`}
       </div>
       <div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">ຊົ່ວໂມງ Livestream</span><span style="color:${hoursColor};font-weight:600;">${vj.hoursMonth.toFixed(1)} / ${vj.reqHours} ຊ.ມ.</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">ຊົ່ວໂມງ Live</span><span style="color:${hoursColor};font-weight:600;">${vj.hoursMonth.toFixed(1)} / ${vj.reqHours} ຊ.ມ.</span></div>
         <div style="height:7px;background:var(--ink);border-radius:5px;overflow:hidden;"><div style="height:100%;width:${hoursPct}%;background:${vj.hoursReqMet ? 'linear-gradient(90deg,var(--mint),#1ab88c)' : 'linear-gradient(90deg,var(--coral),var(--gold))' };border-radius:5px;"></div></div>
         ${!vj.hoursReqMet ? `<div style="font-size:10.5px;color:var(--coral);margin-top:3px;">⚠️ ຂາດ ${(vj.reqHours - vj.hoursMonth).toFixed(1)} ຊ.ມ.</div>` : `<div style="font-size:10.5px;color:var(--mint);margin-top:3px;">✅ ຊົ່ວໂມງຄົບ!</div>`}
       </div>
       ${vj.currentBonus > 0 ? `<div style="background:rgba(245,184,46,0.08);border:1px solid rgba(245,184,46,0.25);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-mid);">🎁 ໂບນັດທີ່ຈະໄດ້ (${vj.currentGrade})${vj.bonusIsPercent ? ` — ${Math.round((vj.currentBonus/vj.beansMonth)*100)}%` : ''}</span><span style="font-family:var(--f-mono);font-weight:700;color:var(--gold);">${fmtInt(vj.currentBonus)} beans</span></div>` : `<div style="background:rgba(255,107,94,0.06);border:1px solid rgba(255,107,94,0.2);border-radius:10px;padding:8px 10px;"><span style="font-size:12px;color:var(--text-low);">ຍັງບໍ່ຮອດ Grade — ຕ້ອງການ ${fmtInt(vj.needBeans)} beans ອີກ (${vj.nextGrade})</span></div>`}
-      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:10.5px;color:var(--text-low);"><span>📅 ເລີ່ມ: ${escapeHtml(vj.startDate)}</span><span>🕐 ສິ້ນສຸດ: ${escapeHtml(vj.lastLive || '—')}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:10.5px;color:var(--text-low);"><span>📅 ເລີ່ມ: ${escapeHtml(vj.startDate)}</span></div>
     </div>`;
 }
 

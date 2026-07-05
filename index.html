@@ -1080,7 +1080,7 @@ function renderHome(){
     <div class="page-head fade-in">
       <p class="eyebrow">EMO Agency</p>
       <h1>ສະບາຍດີ 👋</h1>
-      <p>ພາບລວມຄ່າຄອມມິດຊັ່ນ &amp; ໂບນັດ VJ — ອັບເດດຫຼ້າສຸດ: ${latest.label}</p>
+      <p>ພາບລວມຄ່າຄອມມິດຊັ່ນ &amp; ໂບນັດ VJ — ອັບເດດລ່າສຸດ: ${latest.label}</p>
     </div>
     ${State.isAdmin ? `
     <div class="hero-balance">
@@ -1282,7 +1282,7 @@ function renderBonus(){
           <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:${i===0?'linear-gradient(145deg,var(--gold),#c98f1c)':'linear-gradient(145deg,var(--ink),var(--ink-3))'};border:1px solid ${i===0?'rgba(245,184,46,0.5)':'var(--line)'};display:flex;align-items:center;justify-content:center;font-size:18px;">${i===0?'🥇':'📅'}</div>
           <div style="flex:1; min-width:0;">
             <div style="font-weight:700; font-size:14.5px;">${escapeHtml(h.label)}</div>
-            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>· ${fmtInt(h.vj.validDay)} ມື້</span></div>
+            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>· ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span>></div>
           </div>
           <div style="text-align:right; flex-shrink:0;"><div style="font-family:var(--f-mono); font-weight:800; font-size:16px; color:${i===0?'var(--gold)':'var(--text-hi)'};">$${fmtMoney(h.vj.bonusVjUSD)}</div><div style="font-size:10.5px; color:var(--text-low); margin-top:1px;">+${fmtInt(h.vj.bonusBeansTotal)} beans</div></div>
         </div>`).join('')}

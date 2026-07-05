@@ -1151,7 +1151,7 @@ function vjRowHtml(vj, idx){
       </div>
       <div style="text-align:right;flex-shrink:0;">
         ${State.isAdmin ? `<div style="font-family:var(--f-mono);font-weight:800;font-size:15px;color:${bonus>0?(idx===0?'#C084FC':idx===1?'#90C9FF':idx===2?'#FF9F7A':'var(--gold)'):'var(--text-low)'};${idx===0&&bonus>0?'text-shadow:0 0 12px rgba(192,132,252,0.5);':''}">$${fmtMoney(vj.bonusVjUSD)}</div>` : ''}
-        ${bonus>0?`<div style="font-family:${State.isAdmin?'inherit':'var(--f-mono)'};font-size:${State.isAdmin?'10.5px':'14.5px'};font-weight:${State.isAdmin?'400':'800'};color:${State.isAdmin?'var(--text-low)':'var(--gold)'};margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} beans</div>`:''}
+        ${bonus>0?`<div style="font-size:${State.isAdmin?'10.5px':'11px'};color:var(--text-low);margin-top:1px;">ໂບນັດ</div><div style="font-family:${State.isAdmin?'inherit':'var(--f-mono)'};font-size:${State.isAdmin?'10.5px':'14.5px'};font-weight:${State.isAdmin?'400':'800'};color:${State.isAdmin?'var(--text-low)':'var(--gold)'};margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} beans</div>`:''}
       </div>
     </div>`;
 }

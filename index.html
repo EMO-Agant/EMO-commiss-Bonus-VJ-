@@ -651,6 +651,7 @@ const USER_NAV = [
   { id:'bonus', label:'ໂບນັດຂ້ອຍ', icon:'💵'},
   { id:'livedata', label:'Live Data', icon:'🎯'},
   { id:'newvjactive', label:'New VJ Active', icon:'🌟'},
+  { id:'cashbonus', label:'ໂບນັດເງິນສົດ', icon:'💰'},
   { id:'leaderboard', label:'ອັນດັບ VJ', icon:'🏆'},
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
 ];
@@ -894,7 +895,7 @@ function render(){
   renderShell();
   const main = document.getElementById('main');
   const titles = {
-    home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',newvjactive:'VJ ໃໝ່ Active',
+    home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',newvjactive:'VJ ໃໝ່ Active',cashbonus:'ໂບນັດເງິນສົດ',
     leaderboard:'ອັນດັບ VJ', lookup:'ຄົ້ນຫາ VJ',
     'admin-login':'ເຂົ້າສູ່ລະບົບ Admin', 'admin-dashboard':'ພາບລວມ Admin',
     'admin-months':'ຈັດການເດືອນ', 'admin-vj':'ຈັດການ VJ', 'admin-banners':'ຈັດການແບນເນີ້', 'admin-summary':'ສະຫຼຸບ Agency','admin-settings':'ຕັ້ງຄ່າ & ສີ',
@@ -910,6 +911,7 @@ function render(){
     case 'lookup': main.innerHTML = renderLookup(); break;
     case 'livedata': main.innerHTML = renderVjLiveData(); break;
     case 'newvjactive': main.innerHTML = renderNewVjActive(); break;
+    case 'cashbonus': main.innerHTML = renderCashBonus(); break;
     case 'admin-login': main.innerHTML = renderAdminLogin(); break;
     case 'admin-dashboard': main.innerHTML = State.isAdmin ? renderAdminDashboard() : renderAdminLogin(); break;
     case 'admin-months': main.innerHTML = State.isAdmin ? renderAdminMonths() : renderAdminLogin(); break;
@@ -2240,6 +2242,65 @@ function renderNewVjActiveListInner(){
       </div>
       ${newVjActiveStatusTableHtml(vj)}
     </div>`).join('');
+}
+
+let _cashBonusCache = null;
+let _cashBonusLoading = false;
+async function fetchCashBonusData(monthKey){
+  if(_cashBonusLoading) return;
+  _cashBonusLoading = true;
+  try{
+    const res = await gasCall('getCashBonusData', monthKey || State.activeLiveMonth || null);
+    if(res && !res.error){
+      _cashBonusCache = res;
+      if(Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
+      State.activeLiveMonth = res.month || State.activeLiveMonth;
+    } else { _cashBonusCache = null; toast((res&&res.error)||'ໂຫລດຂໍ້ມູນບໍ່ສຳເລັດ','error'); }
+  }catch(e){ _cashBonusCache = null; toast(e.message || 'ໂຫລດຂໍ້ມູນບໍ່ສຳເລັດ','error'); }
+  _cashBonusLoading = false;
+  if(State.view === 'cashbonus'){ document.getElementById('main').innerHTML = renderCashBonus(); afterRenderHook(); }
+}
+function renderCashBonus(){
+  if(!_cashBonusCache && !_cashBonusLoading){ fetchCashBonusData(); return skeletonHtml(); }
+  if(_cashBonusLoading && !_cashBonusCache) return skeletonHtml();
+  const data = _cashBonusCache || {list:[], totalNew:0, totalOld:0, totalAll:0};
+  const newList = data.list.filter(v=>v.bonusType==='new');
+  const oldList = data.list.filter(v=>v.bonusType==='old');
+  function row(v){
+    return `
+      <div class="vj-row">
+        <div class="vj-avatar">${initials(v.bigoId)}</div>
+        <div class="vj-info">
+          <div class="name">${escapeHtml(v.bigoId)}</div>
+          <div class="meta">${fmtInt(v.sbeans)} beans · ${v.validDay} ມື້ · ${v.validHour} ຊ.ມ.
+            ${v.met?'':`<span class="text-coral">· ${escapeHtml(v.reason||'')}</span>`}
+          </div>
+        </div>
+        <div class="vj-amount">
+          <div class="usd" style="color:${v.met?'var(--gold)':'var(--text-low)'};">${fmtInt(v.bonusAmount)} ₭</div>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">ໂບນັດເງິນສົດ</p>
+      <h1>💰 ໂບນັດເງິນສົດ VJ</h1>
+      <p>ຄິດໄລ່ຈາກຕາຕະລາງ 2026 — ${data.month?escapeHtml(data.month):''}</p>
+    </div>
+    ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="State.activeLiveMonth='${m.key}'; _cashBonusCache=null; fetchCashBonusData('${m.key}');">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
+    <div class="stat-grid" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="l">ໂບນັດ VJ ໃໝ່</div><div class="v gold">${fmtInt(data.totalNew)} ₭</div></div>
+      <div class="stat-card"><div class="l">ໂບນັດ VJ ເກົ່າ</div><div class="v mint">${fmtInt(data.totalOld)} ₭</div></div>
+      <div class="stat-card"><div class="l">ລວມທັງໝົດ</div><div class="v">${fmtInt(data.totalAll)} ₭</div></div>
+    </div>
+    <div class="section-label">🌟 ວີເຈໃໝ່ (ເດືອນທຳອິດ) — ${newList.length} ຄົນ</div>
+    <div class="card" style="padding:8px;">
+      ${newList.length ? newList.map(row).join('') : `<div class="empty-state" style="padding:24px;"><p>ບໍ່ມີວີເຈໃໝ່ໃນເດືອນນີ້</p></div>`}
+    </div>
+    <div class="section-label">🏆 ວີເຈເກົ່າ Active (≥3 ເດືອນ) — ${oldList.length} ຄົນ</div>
+    <div class="card" style="padding:8px;">
+      ${oldList.length ? oldList.map(row).join('') : `<div class="empty-state" style="padding:24px;"><p>ບໍ່ມີວີເຈເກົ່າຮອດເງື່ອນໄຂ</p></div>`}
+    </div>`;
 }
 
 async function runConnectionCheck() {

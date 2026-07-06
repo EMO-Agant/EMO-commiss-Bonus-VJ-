@@ -2082,7 +2082,7 @@ function renderVjLiveData() {
         <button class="btn btn-primary btn-block" onclick="submitLiveSearch()">${ICONS.search} ກວດສອບຂໍ້ມູນ Live ຂອງຂ້ອຍ</button>
       </div>
       <div class="card" style="margin-top:14px; background:rgba(111,183,255,0.06); border-color:rgba(111,183,255,0.25);">
-        <p style="font-size:13px; color:var(--text-mid); margin:0; line-height:1.7;">💡 ໃສ່ Bigo ID ຂອງທ່ານ ເພື່ອເບິ່ງ:<br>• Beans ທີ່ເຄີຍໄດ້ເດືອນນີ້<br>• ຊົ່ວໂມງ Livestream ທີ່ສะສົມ<br>• Grade ແລະ ໂບນັດທີ່ຈະໄດ້ຮັບ<br>• ຈຳນວນ beans ທີ່ຍັງຂາດ</p>
+        <p style="font-size:13px; color:var(--text-mid); margin:0; line-height:1.7;">💡 ໃສ່ Bigo ID ຂອງທ່ານ ເພື່ອເບິ່ງ:<br>• ຖົ່ວທີ່ໄດ້ໃນເດືອນນີ້<br>• ຊົ່ວໂມງ Lives ທີ່ສะສົມ<br>• Grade ແລະ ໂບນັດທີ່ຈະໄດ້ຮັບ<br>• ຈຳນວນຖົ່ວ ທີ່ຍັງຂາດ</p>
       </div>`;
   }
   const found = list.find(v => String(v.bigoId).trim().toLowerCase() === liveSearchId.toLowerCase());
@@ -2138,9 +2138,9 @@ function vjLiveCardHtml(vj) {
         <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:var(--text-mid);">${vj.daysLeft}</div><div style="font-size:10px;color:var(--text-low);">ມື້ທີ່ຍັງເຫຼືອ</div></div>
       </div>
       <div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">Beans → ${vj.nextGrade !== 'MAX' ? vj.nextGrade : '🏆 MAX'}</span><span style="color:var(--gold);font-weight:600;">${fmtInt(vj.beansMonth)} / ${vj.nextGrade !== 'MAX' ? fmtInt(vj.nextBeanTarget) : '✓'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">ຈຳນວນຖົ່ວ → ${vj.nextGrade !== 'MAX' ? vj.nextGrade : '🏆 MAX'}</span><span style="color:var(--gold);font-weight:600;">${fmtInt(vj.beansMonth)} / ${vj.nextGrade !== 'MAX' ? fmtInt(vj.nextBeanTarget) : '✓'}</span></div>
         <div style="height:7px;background:var(--ink);border-radius:5px;overflow:hidden;"><div style="height:100%;width:${gradePct}%;background:${gradeBarColor};border-radius:5px;transition:width 0.5s;"></div></div>
-        ${vj.needBeans > 0 ? `<div style="font-size:10.5px;color:var(--coral);margin-top:3px;">⚠️ ຂາດ ${fmtInt(vj.needBeans)} beans ເພື່ອ ${vj.nextGrade}</div>` : vj.nextGrade !== 'MAX' ? '' : `<div style="font-size:10.5px;color:var(--mint);margin-top:3px;">✅ ຮອດ Grade ສູງສຸດແລ້ວ!</div>`}
+        ${vj.needBeans > 0 ? `<div style="font-size:10.5px;color:var(--coral);margin-top:3px;">⚠️ ຂາດ ${fmtInt(vj.needBeans)} ຖົ່ວ ເພື່ອໄດ້ ${vj.nextGrade}</div>` : vj.nextGrade !== 'MAX' ? '' : `<div style="font-size:10.5px;color:var(--mint);margin-top:3px;">✅ ຮອດ Grade ສູງສຸດແລ້ວ!</div>`}
       </div>
       <div style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">ຊົ່ວໂມງ Live</span><span style="color:${hoursColor};font-weight:600;">${vj.hoursMonth.toFixed(1)} / ${vj.reqHours} ຊ.ມ.</span></div>

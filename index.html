@@ -539,7 +539,7 @@ const State = {
     logoText:'E', logoColor:'#F5B82E', systemName:'EMO Agency', systemSub:'Commission & Bonus VJ',
     heroBg1:'#182441', heroBg2:'#0E1626', heroGlow:'#F5B82E',
     loginBg1:'#182441', loginBg2:'#0B1220', loginGlow:'#F5B82E',
-    loginAccent:'#F5B82E', loginAccentText:'#21170a'
+    loginAccent:'#F5B82E', loginAccentText:'#21170a',
     loginTitleColor:'#F5B82E', loginSubColor:'rgba(255,255,255,0.72)'
   },
   banners: { banners: [], tickerText: '', tickerEnabled: true },
@@ -2192,16 +2192,6 @@ function renderAdminSettings(){
             <input type="color" class="color-picker" data-key="${k}" value="${safeHex(t[k]||'#000000')}" oninput="liveColorPreview('${k}',this.value); document.getElementById('hex_${k}').value=this.value;">
             <input type="text" class="color-hex" id="hex_${k}" data-key="${k}" value="${safeHex(t[k]||'#000000')}" maxlength="7" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)){liveColorPreview('${k}',this.value); document.querySelector('[data-key=${k}].color-picker').value=this.value;}">
           </div>`).join('')}
-          <div class="color-grid">
-            <div class="color-item">
-              <label>🎨 ສີປຸ່ມ Login</label>
-              <input type="color" class="color-picker" id="loginButtonColor" value="...">
-            </div>
-            <div class="color-item">
-              <label>🖊️ ສີຕົວໜັງສືປຸ່ມ Login</label>
-              <input type="color" class="color-picker" id="loginButtonTextColor" value="...">
-            </div>
-          </div>
       </div>
     </div>
     <div class="section-label">🔤 Font</div>
@@ -2265,6 +2255,14 @@ function renderAdminSettings(){
         <div class="color-item">
           <label>🖊️ ສີຕົວໜັງສືປຸ່ມ Login</label>
           <input type="color" class="color-picker" id="loginButtonTextColor" value="${/^#[0-9a-fA-F]{6}$/.test(t.loginButtonTextColor||'')?t.loginButtonTextColor:'#21170a'}">
+        </div>
+        <div class="color-item">
+          <label>🏷️ ສີຫົວຂໍ້ Login (ເຂົ້າສູ່ລະບົບ VJ)</label>
+          <input type="color" class="color-picker" id="loginTitleColor" value="${/^#[0-9a-fA-F]{6}$/.test(t.loginTitleColor||'')?t.loginTitleColor:'#F5B82E'}">
+        </div>
+        <div class="color-item">
+          <label>🏷️ ສີຄຳອະທິບາຍ Login (subtitle)</label>
+          <input type="color" class="color-picker" id="loginSubColor" value="#FFFFFF">
         </div>
       </div>
       <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="document.getElementById('loginBgImage').value=''; toast('ລຶບຮູບແລ້ວ (ຍັງບໍ່ໄດ້ບັນທຶກ)','info');">🗑️ ລຶບຮູບພື້ນຫຼັງ Login</button>

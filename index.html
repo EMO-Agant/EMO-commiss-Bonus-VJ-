@@ -2264,8 +2264,8 @@ function renderCashBonus(){
   if(!_cashBonusCache && !_cashBonusLoading){ fetchCashBonusData(); return skeletonHtml(); }
   if(_cashBonusLoading && !_cashBonusCache) return skeletonHtml();
   const data = _cashBonusCache || {list:[], totalNew:0, totalOld:0, totalAll:0};
-  const newList = data.list.filter(v=>v.bonusType==='new');
-  const oldList = data.list.filter(v=>v.bonusType==='old');
+  const newList = data.list.filter(v=>v.bonusType==='new' && v.met);
+  const oldList = data.list.filter(v=>v.bonusType==='old' && v.met);
   function row(v){
     return `
       <div class="vj-row">
@@ -2288,11 +2288,13 @@ function renderCashBonus(){
       <p>ຄິດໄລ່ຈາກຕາຕະລາງ 2026 — ${data.month?escapeHtml(data.month):''}</p>
     </div>
     ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="State.activeLiveMonth='${m.key}'; _cashBonusCache=null; fetchCashBonusData('${m.key}');">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
+    ${State.isAdmin ? `
     <div class="stat-grid" style="margin-bottom:14px;">
       <div class="stat-card"><div class="l">ໂບນັດ VJ ໃໝ່</div><div class="v gold">${fmtInt(data.totalNew)} ₭</div></div>
       <div class="stat-card"><div class="l">ໂບນັດ VJ ເກົ່າ</div><div class="v mint">${fmtInt(data.totalOld)} ₭</div></div>
       <div class="stat-card"><div class="l">ລວມທັງໝົດ</div><div class="v">${fmtInt(data.totalAll)} ₭</div></div>
     </div>
+    ` : ''}
     <div class="section-label">🌟 ວີເຈໃໝ່ (ເດືອນທຳອິດ) — ${newList.length} ຄົນ</div>
     <div class="card" style="padding:8px;">
       ${newList.length ? newList.map(row).join('') : `<div class="empty-state" style="padding:24px;"><p>ບໍ່ມີວີເຈໃໝ່ໃນເດືອນນີ້</p></div>`}

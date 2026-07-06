@@ -2267,9 +2267,12 @@ function renderCashBonus(){
   const newList = data.list.filter(v=>v.bonusType==='new' && v.met);
   const oldList = data.list.filter(v=>v.bonusType==='old' && v.met);
   function row(v){
+    const purl = findPhotoUrlByBigoId(v.bigoId);
     return `
       <div class="vj-row">
-        <div class="vj-avatar">${initials(v.bigoId)}</div>
+        <div class="vj-avatar" style="overflow:hidden;">
+          ${purl ? `<img src="${escapeHtml(purl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(v.bigoId)}</span>` : initials(v.bigoId)}
+        </div>
         <div class="vj-info">
           <div class="name">${escapeHtml(v.bigoId)}</div>
           <div class="meta">${fmtInt(v.sbeans)} beans · ${v.validDay} ມື້ · ${v.validHour} ຊ.ມ.

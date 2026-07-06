@@ -547,7 +547,7 @@ const State = {
   monthsData: {},
   activeMonth: null,
   myBigoId: localStorage.getItem('emo_my_bigoid') || '',
-  vjSession: JSON.parse(localStorage.getItem('emo_vj_session') || 'null'),
+  vjSession: null,
   recentLogins: [],
   _lastLoginCheck: new Date(Date.now() - 60000).toISOString(),
   lookupHistory: null,
@@ -1582,7 +1582,6 @@ async function submitVjPhoneLogin(){
     const res = await gasCall('vjLoginByPhone', phone);
     if(res && res.ok){
       State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId };
-      localStorage.setItem('emo_vj_session', JSON.stringify(State.vjSession));
       document.body.classList.remove('pre-login');
       toast('ຍິນດີຕ້ອນຮັບ ' + res.vjName, 'success');
       bootApp();

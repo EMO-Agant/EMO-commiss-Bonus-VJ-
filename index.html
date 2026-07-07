@@ -700,6 +700,7 @@ async function gasCall(fnName, ...args){
     'adminSaveVj','adminDeleteVj','adminBulkImportVj',
     'saveThemeSettings','resetThemeSettings','saveBannersData',
     'askEmoAssistant'   // ← ເພີ່ມແຖວນີ້
+    'adminSaveVjPhoto','adminDeleteVjPhoto'
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -1182,6 +1183,7 @@ async function bootApp(){
 
       gasCall('getThemeSettings').then(t => { if(t) applyTheme(t); }).catch(()=>{}),
       gasCall('getBannersData').then(b => { if(b){ State.banners = b; startBannerAutoplay(); try{ localStorage.setItem('emo_cache_banners', JSON.stringify(b)); }catch(e){} } }).catch(()=>{}),
+      gasCall('getVjPhotos').then(m => { if(m) State.vjPhotos = m; }).catch(()=>{}),
       gasCall('getVjLiveData', null).then(res => {
         if (res && !res.error) {
           _vjLiveCache = res.list; State.liveMonths = res.months; State.activeLiveMonth = res.month;
@@ -1991,7 +1993,7 @@ function openVjFormModal(month, vj){
       <div class="field"><label>Remark</label><input data-key="remark" type="text" value="${escapeHtml(f('remark'))}"></div>
       <div class="field">
         <label>📸 Photo URL (ຮູບ VJ ສຳລັບ Podium)</label>
-        <input data-key="photoUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(f('photoUrl'))}">
+        <input data-key="photoUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(State.vjPhotos[String(f('bigoId')).trim().toLowerCase()] || '')}">
         <p class="field-hint">Google Drive: Share → Copy link → ປ່ຽນ /file/d/ID/view → /uc?id=ID &nbsp;|&nbsp; ຫຼືໃຊ້ link ຮູບໂດຍກົງ</p>
         ${f('photoUrl') ? `<img src="${escapeHtml(f('photoUrl'))}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-top:8px;border:2px solid var(--gold);" onerror="this.style.display='none'">` : ''}
       </div>
@@ -2015,6 +2017,28 @@ async function submitVjForm(month, rowIndex){
     setView('admin-vj', {month});
   }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
+
+async function submitVjForm(month, rowIndex){
+  const inputs = document.querySelectorAll('#vjForm [data-key]');
+  const payload = {};
+  inputs.forEach(inp => payload[inp.dataset.key] = inp.value);
+  if(!payload.bigoId){ toast('ກະລຸນາປ້ອນ Bigo ID','error'); return; }
+  if(rowIndex && rowIndex > 1) payload.rowIndex = rowIndex;
+  try{
+    const photoUrl = payload.photoUrl;
+    delete payload.photoUrl; // ← ບໍ່ບັນທຶກໃສ່ຖັນລາຍເດືອນອີກຕໍ່ໄປ
+    await gasCall('adminSaveVj', State.adminPassword, month, payload);
+    if(photoUrl !== undefined){
+      await gasCall('adminSaveVjPhoto', State.adminPassword, payload.bigoId, photoUrl);
+      State.vjPhotos[String(payload.bigoId).trim().toLowerCase()] = photoUrl;
+    }
+    toast('ບັນທຶກ VJ ສຳເລັດ','success');
+    closeModal();
+    await refreshData(false);
+    setView('admin-vj', {month});
+  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+
 function confirmDeleteVj(month, rowIndex){
   openModal(`
     <div class="modal-head"><h3>ລຶບ VJ?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
@@ -2539,10 +2563,12 @@ function submitLiveSearch() {
 }
 function findPhotoUrlByBigoId(bigoId) {
   if (!bigoId) return '';
-  const target = String(bigoId).trim().toLowerCase();
+  const key = String(bigoId).trim().toLowerCase();
+  if (State.vjPhotos && State.vjPhotos[key]) return State.vjPhotos[key];
+  // fallback: ຮູບເກົ່າທີ່ເຄີຍໃສ່ໄວ້ໃນລາຍເດືອນ (ຖ້າມີ)
   for (const m of State.months) {
     const list = (State.monthsData[m] && State.monthsData[m].vjList) || [];
-    for (const v of list) { if (String(v.bigoId).trim().toLowerCase() === target && v.photoUrl) return v.photoUrl; }
+    for (const v of list) { if (String(v.bigoId).trim().toLowerCase() === key && v.photoUrl) return v.photoUrl; }
   }
   return '';
 }

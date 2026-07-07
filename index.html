@@ -530,6 +530,22 @@ const ICONS = {
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
 };
 
+const EMO_MASCOT_SVG = `
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+  <defs><linearGradient id="emoBody" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFD873"/><stop offset="1" stop-color="#F5B82E"/>
+  </linearGradient></defs>
+  <path d="M12 20 Q6 8 18 6" stroke="#c98f1c" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="18" cy="6" r="3" fill="#FFE9A8"/>
+  <path d="M52 20 Q58 8 46 6" stroke="#c98f1c" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="46" cy="6" r="3" fill="#FFE9A8"/>
+  <circle cx="32" cy="34" r="26" fill="url(#emoBody)" stroke="#c98f1c" stroke-width="2"/>
+  <circle cx="23" cy="30" r="5.5" fill="#21170a"/><circle cx="41" cy="30" r="5.5" fill="#21170a"/>
+  <circle cx="24.6" cy="28.2" r="1.6" fill="#fff"/><circle cx="42.6" cy="28.2" r="1.6" fill="#fff"/>
+  <path d="M22 42 Q32 50 42 42" stroke="#21170a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>`;
+const EMO_MASCOT_SVG_SMALL = EMO_MASCOT_SVG.replace('width="64" height="64"', 'width="30" height="30"');
+
 const BEAN_IMG_URL = 'https://i.postimg.cc/YSHQ7tBK/Breen.png';
 const BEAN_IMG_SM  = `<img src="${BEAN_IMG_URL}" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;display:inline-block;" onerror="this.outerHTML='https://i.postimg.cc/YSHQ7tBK/Breen.png'">`;
 const BEAN_IMG_MD  = `<img src="${BEAN_IMG_URL}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;" onerror="this.outerHTML='https://i.postimg.cc/YSHQ7tBK/Breen.png'">`;
@@ -695,7 +711,8 @@ async function gasCall(fnName, ...args){
   const WRITE_ACTIONS = new Set([
     'adminLogin','adminCreateMonth','adminDeleteMonth','adminSaveSummary',
     'adminSaveVj','adminDeleteVj','adminBulkImportVj',
-    'saveThemeSettings','resetThemeSettings','saveBannersData'
+    'saveThemeSettings','resetThemeSettings','saveBannersData',
+    'askEmoAssistant'   // ← ເພີ່ມແຖວນີ້
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -739,6 +756,7 @@ const USER_NAV = [
   { id:'newvjactive', label:'New VJ Active', icon:'🌟'},
   { id:'cashbonus', label:'ໂບນັດເງິນສົດ', icon:'💰'},
   { id:'leaderboard', label:'ອັນດັບ VJ', icon:'🏆'},
+  { id:'emo', label:'ນ້ອງ EMO', icon:'🤖'}, 
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
 ];
 const TABBAR_NAV = USER_NAV.filter(n => n.id !== 'lookup');
@@ -1029,7 +1047,7 @@ function render(){
   const main = document.getElementById('main');
   const titles = {
     home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',newvjactive:'VJ ໃໝ່ Active',cashbonus:'ໂບນັດເງິນສົດ',
-    leaderboard:'ອັນດັບ VJ', lookup:'ຄົ້ນຫາ VJ',
+    leaderboard:'ອັນດັບ VJ',emo:'ນ້ອງ EMO',lookup:'ຄົ້ນຫາ VJ',
     'admin-login':'ເຂົ້າສູ່ລະບົບ Admin', 'admin-dashboard':'ພາບລວມ Admin',
     'admin-months':'ຈັດການເດືອນ', 'admin-vj':'ຈັດການ VJ', 'admin-banners':'ຈັດການແບນເນີ້', 'admin-summary':'ສະຫຼຸບ Agency','admin-settings':'ຕັ້ງຄ່າ & ສີ',
   };
@@ -1044,6 +1062,7 @@ function render(){
     case 'lookup': main.innerHTML = renderLookup(); break;
     case 'livedata': main.innerHTML = renderVjLiveData(); break;
     case 'newvjactive': main.innerHTML = renderNewVjActive(); break;
+    case 'emo': main.innerHTML = renderEmoAssistant(); break;
     case 'cashbonus': main.innerHTML = renderCashBonus(); break;
     case 'admin-login': main.innerHTML = renderAdminLogin(); break;
     case 'admin-dashboard': main.innerHTML = State.isAdmin ? renderAdminDashboard() : renderAdminLogin(); break;
@@ -1370,6 +1389,64 @@ function podiumHtml(top3) {
 }
 function emptyStateHtml(icon, title, desc){
   return `<div class="empty-state fade-in"><span style="font-size:28px;line-height:1;display:block;margin-bottom:10px;opacity:0.8;">💸</span><h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc)}</p></div>`;
+}
+
+function renderEmoAssistant(){
+  if(!State.emoChatHistory) State.emoChatHistory = [];
+  const hist = State.emoChatHistory;
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">ຜູ້ຊ່ວຍ AI</p><h1>ນ້ອງ EMO 🤖</h1>
+      <p>ຖາມນ້ອງ EMO ໄດ້ທຸກເລື່ອງ: ໂບນັດ, ຈັດຫ້ອງໄລ້, ແຕ່ງໂຕ, ລົມກັບຜູ້ຊົມ ແລະ ອື່ນໆ</p>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+      ${EMO_MASCOT_SVG}
+      <div><div style="font-weight:700; font-size:15px;">ສະບາຍດີ! ຂ້ອຍແມ່ນນ້ອງ EMO 👋</div>
+      <div class="text-low" style="font-size:12.5px;">ຜູ້ຊ່ວຍ AI ຂອງ EMO Agency ພ້ອມຊ່ວຍທ່ານທຸກເລື່ອງການໄລ້</div></div>
+    </div>
+    <div id="emoChatLog" style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px; max-height:50vh; overflow-y:auto;">
+      ${hist.length ? hist.map(m => emoMessageHtml(m)).join('') : `<div class="empty-state" style="padding:20px;"><p>ຍັງບໍ່ມີການສົນທະນາ — ລອງຖາມນ້ອງ EMO ເບິ່ງ!</p></div>`}
+    </div>
+    <div class="chip-row" style="margin-bottom:8px;">
+      <button class="chip" onclick="sendEmoQuickQuestion('ໂບນັດເດືອນນີ້ຄິດແນວໃດ?')">💰 ໂບນັດຄິດແນວໃດ?</button>
+      <button class="chip" onclick="sendEmoQuickQuestion('ຈັດຫ້ອງໄລ້ແນວໃດໃຫ້ໜ້າສົນໃຈ?')">🎥 ຈັດຫ້ອງໄລ້</button>
+      <button class="chip" onclick="sendEmoQuickQuestion('ແຕ່ງໂຕແນວໃດໃຫ້ສວຍໃນກ້ອງ?')">💄 ແຕ່ງໂຕ</button>
+      <button class="chip" onclick="sendEmoQuickQuestion('ລົມກັບຜູ້ຊົມແນວໃດໃຫ້ຖືກໃຈ?')">💬 ລົມກັບຜູ້ຊົມ</button>
+    </div>
+    <div class="search-bar" style="margin-bottom:0;">
+      <input id="emoChatInput" type="text" placeholder="ພິມຄຳຖາມຫາ ນ້ອງ EMO..." onkeydown="if(event.key==='Enter') submitEmoChat();">
+      <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="submitEmoChat()">ສົ່ງ</button>
+    </div>`;
+}
+function emoMessageHtml(m){
+  const isUser = m.role === 'user';
+  return `<div style="display:flex; ${isUser?'justify-content:flex-end;':'justify-content:flex-start;'} gap:8px;">
+    ${!isUser ? `<div>${EMO_MASCOT_SVG_SMALL}</div>` : ''}
+    <div style="max-width:78%; padding:10px 14px; border-radius:16px; font-size:13.5px; line-height:1.5; white-space:pre-wrap;
+      background:${isUser?'var(--gold)':'var(--ink-3)'}; color:${isUser?'#21170a':'var(--text-hi)'};">${escapeHtml(m.content)}</div>
+  </div>`;
+}
+async function submitEmoChat(){
+  const input = document.getElementById('emoChatInput');
+  const q = input.value.trim();
+  if(!q) return;
+  input.value = '';
+  await sendEmoQuickQuestion(q);
+}
+async function sendEmoQuickQuestion(q){
+  if(!State.emoChatHistory) State.emoChatHistory = [];
+  State.emoChatHistory.push({role:'user', content:q});
+  render();
+  try{
+    const historyForApi = State.emoChatHistory.slice(0,-1).slice(-10);
+    const res = await gasCall('askEmoAssistant', q, historyForApi);
+    State.emoChatHistory.push({role:'assistant', content: res.reply || '...'});
+  }catch(err){
+    State.emoChatHistory.push({role:'assistant', content: 'ຂໍໂທດ ນ້ອງ EMO ຂັດຂ້ອງ: ' + (err.message||'')});
+  }
+  render();
+  const log = document.getElementById('emoChatLog');
+  if(log) log.scrollTop = log.scrollHeight;
 }
 
 /* ============================================================================

@@ -1935,9 +1935,14 @@ function renderAdminVjManage(){
     </div>`;
 }
 function adminVjRowHtml(month, vj){
+  const _purl = findPhotoUrlByBigoId(vj.bigoId);
   return `
     <div class="vj-row">
-      <div class="vj-avatar">${initials(vj.bigoId)}</div>
+      <div class="vj-avatar" style="overflow:hidden;">
+        ${_purl
+          ? `<img src="${escapeHtml(_purl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(vj.bigoId)}</span>`
+          : initials(vj.bigoId)}
+      </div>
       <div class="vj-info">
         <div class="name">${escapeHtml(vj.bigoId)}</div>
         <div class="meta">${tierBadgeHtml(vj.ticketLevel)} <span>${fmtInt(vj.sbeans)} sbeans</span> <span>${escapeHtml(vj.type||'')}</span></div>

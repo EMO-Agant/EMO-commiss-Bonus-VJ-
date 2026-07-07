@@ -746,7 +746,7 @@ const USER_NAV = [
   { id:'emo', label:'ນ້ອງ EMO', icon:'🤖'}, 
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
 ];
-const TABBAR_NAV = USER_NAV.filter(n => n.id !== 'lookup');
+const TABBAR_NAV = USER_NAV.filter(n => n.id !== 'lookup' && n.id !== 'emo');
 const ADMIN_NAV = [
   { id:'admin-dashboard', label:'ພາບລວມ', icon:'📊' },
   { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅' },

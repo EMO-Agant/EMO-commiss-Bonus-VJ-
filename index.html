@@ -754,6 +754,7 @@ const ADMIN_NAV = [
   { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖' },
   { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅' },
   { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱' },
+  { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠' },
   { id:'admin-settings', label:'ຕັ້ງຄ່າ & ສີ', icon:'⚙️' },
 ];
 
@@ -1037,7 +1038,7 @@ function render(){
     home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',newvjactive:'VJ ໃໝ່ Active',cashbonus:'ໂບນັດເງິນສົດ',
     leaderboard:'ອັນດັບ VJ',emo:'ນ້ອງ EMO',lookup:'ຄົ້ນຫາ VJ',
     'admin-login':'ເຂົ້າສູ່ລະບົບ Admin', 'admin-dashboard':'ພາບລວມ Admin',
-    'admin-months':'ຈັດການເດືອນ', 'admin-vj':'ຈັດການ VJ', 'admin-banners':'ຈັດການແບນເນີ້', 'admin-summary':'ສະຫຼຸບ Agency','admin-settings':'ຕັ້ງຄ່າ & ສີ',
+    'admin-months':'ຈັດການເດືອນ', 'admin-vj':'ຈັດການ VJ', 'admin-banners':'ຈັດການແບນເນີ້', 'admin-summary':'ສະຫຼຸບ Agency','admin-emo-kb':'ຈັດການຄວາມຮູ້ ນ້ອງ EMO','admin-settings':'ຕັ້ງຄ່າ & ສີ',
   };
   document.getElementById('pageTitleDesktop').textContent = titles[State.view] || '';
 
@@ -1058,6 +1059,7 @@ function render(){
     case 'admin-vj': main.innerHTML = State.isAdmin ? renderAdminVjManage() : renderAdminLogin(); break;
     case 'admin-banners': main.innerHTML = State.isAdmin ? renderAdminBanners() : renderAdminLogin(); break;
     case 'admin-vjphone': main.innerHTML = State.isAdmin ? renderAdminVjPhone() : renderAdminLogin(); break;
+    case 'admin-emo-kb': main.innerHTML = State.isAdmin ? renderAdminEmoKb() : renderAdminLogin(); break;
     case 'admin-settings': main.innerHTML = State.isAdmin ? renderAdminSettings() : renderAdminLogin(); break;
     default: main.innerHTML = renderHome();
   }
@@ -1409,12 +1411,17 @@ function renderEmoAssistant(){
 }
 function emoMessageHtml(m){
   const isUser = m.role === 'user';
+  const imgs = (m.images || []);
   return `<div style="display:flex; ${isUser?'justify-content:flex-end;':'justify-content:flex-start;'} gap:8px;">
     ${!isUser ? `<div>${EMO_MASCOT_SVG_SMALL}</div>` : ''}
-    <div style="max-width:78%; padding:10px 14px; border-radius:16px; font-size:13.5px; line-height:1.5; white-space:pre-wrap;
-      background:${isUser?'var(--gold)':'var(--ink-3)'}; color:${isUser?'#21170a':'var(--text-hi)'};">${escapeHtml(m.content)}</div>
+    <div style="max-width:78%; display:flex; flex-direction:column; gap:8px;">
+      <div style="padding:10px 14px; border-radius:16px; font-size:13.5px; line-height:1.5; white-space:pre-wrap;
+        background:${isUser?'var(--gold)':'var(--ink-3)'}; color:${isUser?'#21170a':'var(--text-hi)'};">${escapeHtml(m.content)}</div>
+      ${imgs.length ? `<div style="display:flex; gap:6px; flex-wrap:wrap;">${imgs.map(u=>`<img src="${escapeHtml(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line);" onerror="this.style.display='none'">`).join('')}</div>` : ''}
+    </div>
   </div>`;
 }
+
 async function submitEmoChat(){
   const input = document.getElementById('emoChatInput');
   const q = input.value.trim();
@@ -1422,6 +1429,7 @@ async function submitEmoChat(){
   input.value = '';
   await sendEmoQuickQuestion(q);
 }
+
 async function sendEmoQuickQuestion(q){
   if(!State.emoChatHistory) State.emoChatHistory = [];
   State.emoChatHistory.push({role:'user', content:q});
@@ -1429,7 +1437,7 @@ async function sendEmoQuickQuestion(q){
   try{
     const historyForApi = State.emoChatHistory.slice(0,-1).slice(-10);
     const res = await gasCall('askEmoAssistant', q, historyForApi);
-    State.emoChatHistory.push({role:'assistant', content: res.reply || '...'});
+    State.emoChatHistory.push({role:'assistant', content: res.reply || '...', images: res.images || []});
   }catch(err){
     State.emoChatHistory.push({role:'assistant', content: 'ຂໍໂທດ ນ້ອງ EMO ຂັດຂ້ອງ: ' + (err.message||'')});
   }
@@ -2072,6 +2080,7 @@ async function fetchVjPhoneList(){
   catch(e){ toast(e.message || 'ໂຫລດລາຍຊື່ບໍ່ສຳເລັດ','error'); _vjPhoneCache = []; }
   if(State.view === 'admin-vjphone'){ document.getElementById('main').innerHTML = renderAdminVjPhone(); afterRenderHook(); }
 }
+
 function renderAdminVjPhone(){
   if(_vjPhoneCache === null){ fetchVjPhoneList(); return skeletonHtml(); }
   return `
@@ -2160,6 +2169,98 @@ async function submitDeleteVjPhone(rowIndex){
     closeModal();
     _vjPhoneCache = null;
     fetchVjPhoneList();
+  }catch(err){ toast(err.message || 'ລຶບບໍ່ສຳເລັດ','error'); }
+}
+
+let _emoKbCache = null;
+async function fetchEmoKbList(){
+  try{ _emoKbCache = await gasCall('getEmoExtraKnowledgeList', State.adminPassword); }
+  catch(e){ toast(e.message || 'ໂຫລດຄວາມຮູ້ບໍ່ສຳເລັດ','error'); _emoKbCache = []; }
+  if(State.view === 'admin-emo-kb'){ document.getElementById('main').innerHTML = renderAdminEmoKb(); afterRenderHook(); }
+}
+function renderAdminEmoKb(){
+  if(_emoKbCache === null){ fetchEmoKbList(); return skeletonHtml(); }
+  const list = _emoKbCache || [];
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">Admin</p>
+      <h1>🧠 ຈັດການຄວາມຮູ້ ນ້ອງ EMO</h1>
+      <p>ເພີ່ມຄວາມຮູ້/ຄຳແນະນຳເພີ່ມເຕີມ ໃຫ້ນ້ອງ EMO ໃຊ້ຕອບ VJ (ນອກເໜືອຈາກໄຟລ໌ໃນ Google Drive)</p>
+    </div>
+    <div class="card" style="margin-bottom:14px; background:rgba(111,183,255,0.06); border-color:rgba(111,183,255,0.25);">
+      <p style="font-size:12.5px; color:var(--text-mid); margin:0; line-height:1.7;">
+        💡 ນ້ອງ EMO ຈະຄົ້ນຫາຄຳຕອບຈາກ 2 ແຫຼ່ງ:<br>
+        1) ໄຟລ໌ໃນ Google Drive Folder (Docs, Sheets, ຮູບພາບ)<br>
+        2) ຄວາມຮູ້ທີ່ Admin ພິມໄວ້ໃນໜ້ານີ້<br>
+        ລະບົບຄົ້ນຫາແບບ keyword — ບໍ່ຕ້ອງໃຊ້ AI API ພາຍນອກ ຈຶ່ງບໍ່ຕິດ quota.
+      </p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openEmoKbFormModal(null)">${ICONS.plus} ເພີ່ມຄວາມຮູ້ໃໝ່</button>
+    <div class="section-label">ລາຍການຄວາມຮູ້ (${list.length})</div>
+    <div class="card" style="padding:8px;">
+      ${list.length ? list.map(it => `
+        <div class="vj-row" style="align-items:flex-start;">
+          <div class="vj-avatar">🧠</div>
+          <div class="vj-info">
+            <div class="name">${escapeHtml(it.title)}</div>
+            <div class="meta" style="white-space:normal; line-height:1.5;">${escapeHtml((it.content||'').slice(0,140))}${(it.content||'').length>140?'...':''}</div>
+            ${(it.images&&it.images.length) ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">${it.images.map(u=>`<img src="${escapeHtml(u)}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);" onerror="this.style.display='none'">`).join('')}</div>` : ''}
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="icon-btn" onclick='openEmoKbFormModal(${JSON.stringify(it).replace(/'/g,"&#39;")})'>${ICONS.edit}</button>
+            <button class="icon-btn" style="color:var(--coral);" onclick="confirmDeleteEmoKb('${it.id}')">${ICONS.trash}</button>
+          </div>
+        </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີຄວາມຮູ້ເພີ່ມເຕີມ — ກົດ "ເພີ່ມຄວາມຮູ້ໃໝ່" ເພື່ອເລີ່ມ</p></div>`}
+    </div>`;
+}
+function openEmoKbFormModal(it){
+  const isEdit = !!it;
+  it = it || {};
+  openModal(`
+    <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂຄວາມຮູ້':'ເພີ່ມຄວາມຮູ້ໃໝ່'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <form id="emoKbForm">
+      <div class="field"><label>ຫົວຂໍ້ / ຄຳຖາມ *</label><input data-key="title" type="text" placeholder="ຕົວຢ່າງ: ວິທີຈັດແສງໃນຫ້ອງໄລ້" value="${escapeHtml(it.title||'')}" required></div>
+      <div class="field"><label>ເນື້ອຫາ / ຄຳຕອບ *</label><textarea data-key="content" rows="6" placeholder="ພິມຄຳແນະນຳ ຫຼື ຄຳຕອບ...">${escapeHtml(it.content||'')}</textarea></div>
+      <div class="field"><label>ລິ້ງຮູບປະກອບ (ຄັ່ນດ້ວຍ comma, ຖ້າມີຫຼາຍຮູບ)</label><input data-key="images" type="text" placeholder="https://drive.google.com/uc?id=..., https://..." value="${escapeHtml((it.images||[]).join(', '))}"></div>
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitEmoKbForm(${isEdit?`'${it.id}'`:'null'})">${ICONS.check} ບັນທຶກ</button>
+    </div>`);
+}
+async function submitEmoKbForm(existingId){
+  const titleEl = document.querySelector('#emoKbForm [data-key="title"]');
+  const contentEl = document.querySelector('#emoKbForm [data-key="content"]');
+  const imagesEl = document.querySelector('#emoKbForm [data-key="images"]');
+  const title = titleEl.value.trim();
+  const content = contentEl.value.trim();
+  if(!title || !content){ toast('ກະລຸນາປ້ອນຫົວຂໍ້ ແລະ ເນື້ອຫາ','error'); return; }
+  const images = imagesEl.value.split(',').map(s=>s.trim()).filter(Boolean);
+  const payload = { id: existingId || undefined, title, content, images };
+  try{
+    await gasCall('adminSaveEmoKnowledge', State.adminPassword, payload);
+    toast('ບັນທຶກສຳເລັດ','success');
+    closeModal();
+    _emoKbCache = null;
+    fetchEmoKbList();
+  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+function confirmDeleteEmoKb(id){
+  openModal(`
+    <div class="modal-head"><h3>ລຶບຄວາມຮູ້?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <p class="text-low">ການກະທຳນີ້ບໍ່ສາມາດກູ້ຄືນໄດ້.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-danger" onclick="submitDeleteEmoKb('${id}')">${ICONS.trash} ລຶບເລີຍ</button>
+    </div>`);
+}
+async function submitDeleteEmoKb(id){
+  try{
+    await gasCall('adminDeleteEmoKnowledge', State.adminPassword, id);
+    toast('ລຶບສຳເລັດ','success');
+    closeModal();
+    _emoKbCache = null;
+    fetchEmoKbList();
   }catch(err){ toast(err.message || 'ລຶບບໍ່ສຳເລັດ','error'); }
 }
 

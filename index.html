@@ -2849,7 +2849,7 @@ function newVjActiveStatusTableHtml(vj){
       </thead>
       <tbody>
         ${rows.map(r=>{
-          const daysOk  = (vj.validDay||0) >= r.days;
+          const daysOk  = (vj.hoursMonth||0) >= r.days;
           const hoursOk = (vj.hoursMonth||0) >= r.hours;
           const passed  = daysOk && hoursOk;
           const status  = passed

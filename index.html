@@ -2891,7 +2891,18 @@ function renderNewVjActiveListInner(){
   const q = (State.searchQuery||'').trim().toLowerCase();
   const filtered = q ? list.filter(v => String(v.bigoId).toLowerCase().includes(q) || (v.vjName||'').toLowerCase().includes(q)) : list;
   if(!filtered.length) return `<div class="empty-state"><p>ບໍ່ພົບ VJ ໃໝ່</p></div>`;
-  return filtered.map(vj => `
+
+  const sorted = filtered.slice().sort((a,b)=>{
+    // 1) ຜ່ານເກນ (met=true) ຂຶ້ນກ່ອນສະເໝີ
+    if(a.met !== b.met) return a.met ? -1 : 1;
+    // 2) ຖ້າຜ່ານທັງຄູ່ ຫຼື ບໍ່ຜ່ານທັງຄູ່ → ຮຽງຕາມຖົ່ວ ຫຼາຍ→ໜ້ອຍ
+    const beansDiff = (b.beansMonth||0) - (a.beansMonth||0);
+    if(beansDiff !== 0) return beansDiff;
+    // 3) ຖ້າຖົ່ວເທົ່າກັນ → ຮຽງຕາມຊົ່ວໂມງ ຫຼາຍ→ໜ້ອຍ
+    return (b.hoursMonth||0) - (a.hoursMonth||0);
+  });
+
+  return sorted.map(vj => `
     <div class="card" style="margin-bottom:10px; padding:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <div class="vj-avatar">${initials(vj.bigoId)}</div>

@@ -133,6 +133,11 @@ input,select,textarea{ font-family:inherit; }
   font-size:30px !important; line-height:1;
   background: none; border:none; transition: transform .15s;
 }
+.tab-emoji-box img{
+  width:100% !important;
+  height:100% !important;
+  object-fit:contain;
+}
 .tab-item.active .tab-emoji-box{ transform: scale(1.12); }
 .tab-item.active{ color:var(--gold); }
 .tab-item.active svg{ transform:translateY(-2px); }
@@ -3051,7 +3056,6 @@ function renderPk(){
             </div>`;
           }).join('')}
         </div>
-        <div class="card" style="padding:8px;">
           ${rows.map(r=>{
             const mid = r.date+'_'+r.bigoId;
             const m = matches[mid];
@@ -3080,7 +3084,7 @@ function renderPk(){
                 </div>
 
                 <!-- ★ ໄອຄອນ PK ຢູ່ຈຸດກາງລະຫວ່າງ VJ ສອງຄົນ -->
-                <div style="align-self:center; display:flex; flex-direction:column; align-items:center; margin-top:0;">
+                <div style="align-self:center; display:flex; flex-direction:column; align-items:center; margin-top:-14px;">
                   <img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:44px;height:44px;object-fit:contain;">
                 </div>
 
@@ -3122,7 +3126,7 @@ function renderPk(){
               </div>
               </div>`;
           }).join('')}
-        </div>`;
+        `;
     }).join('')}`;
 }
 

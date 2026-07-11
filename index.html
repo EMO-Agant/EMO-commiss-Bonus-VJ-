@@ -1695,7 +1695,7 @@ function renderLeaderboard(){
   return `
     <div class="page-head fade-in">
       <p class="eyebrow">ອັນດັບ VJ</p>
-      <h1>${escapeHtml(data.label)}</h1>
+      <h1>🏆 ${escapeHtml(data.label)}</h1>
       <p>ຈັດອັນດັບຕາມໂບນັດ VJ (USD) — ${list.length} ຄົນ</p>
     </div>
     <div class="chip-row">
@@ -2824,9 +2824,9 @@ function vjLiveCardHtml(vj) {
         <div style="text-align:right;flex-shrink:0;"><div style="font-family:var(--f-mono);font-weight:700;font-size:15px;color:${gradeColor};">${vj.currentGrade !== '-' ? vj.currentGrade : '—'}</div><div style="font-size:10.5px;color:var(--text-low);">Grade</div></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);">${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວເດືອນນີ້</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:${hoursColor};">${vj.hoursMonth.toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">ຊົ່ວໂມງ/${vj.reqHours}h</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--text-mid);">${vj.daysLeft}</div><div style="font-size:10px;color:var(--text-low);">ມື້ທີ່ຍັງເຫຼືອ</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);">${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">{BEAN_IMG}ຖົ່ວເດືອນນີ້</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:${hoursColor};">${vj.hoursMonth.toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">🕐ຊົ່ວໂມງ/${vj.reqHours}h</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--text-mid);">${vj.daysLeft}</div><div style="font-size:10px;color:var(--text-low);">📆ມື້ທີ່ຍັງເຫຼືອ</div></div>
       </div>
       <div style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:var(--text-low);">ຈຳນວນຖົ່ວ → ${vj.nextGrade !== 'MAX' ? vj.nextGrade : '🏆 MAX'}</span><span style="color:var(--gold);font-weight:600;">${fmtInt(vj.beansMonth)} / ${vj.nextGrade !== 'MAX' ? fmtInt(vj.nextBeanTarget) : '✓'}</span></div>
@@ -3085,7 +3085,7 @@ function renderPk(){
                 </div>
 
                 <!-- ★ ໄອຄອນ PK ຢູ່ຈຸດກາງລະຫວ່າງ VJ ສອງຄົນ -->
-                <div style="align-self:center; display:flex; flex-direction:column; align-items:center; margin-top:-25px;">
+                <div style="align-self:center; display:flex; flex-direction:column; align-items:center; margin-top:-35px;">
                   <img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:44px;height:44px;object-fit:contain;">
                 </div>
 

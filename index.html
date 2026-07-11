@@ -2975,7 +2975,7 @@ function renderCashBonus(){
         </div>
         <div class="vj-info">
           <div class="name">${escapeHtml(v.bigoId)}</div>
-          <div class="meta">${BEAN_IMG_SM} ${fmtInt(v.sbeans)} · ${v.validDay} ມື້ · ${v.validHour} ຊ.ມ.
+          <div class="meta">${BEAN_IMG_SM} ${fmtInt(v.sbeans)} ·📅 ${v.validDay} ມື້ ·🕐 ${v.validHour} ຊ.ມ.
             ${v.met?'':`<span class="text-coral">· ${escapeHtml(v.reason||'')}</span>`}
           </div>
         </div>
@@ -3014,16 +3014,19 @@ async function fetchPkData(monthKey){
   if(_pkLoading) return;
   _pkLoading = true;
   try{
-    const res = await gasCall('getPkData', monthKey || State.activePkMonth || null);
+    const [res, photos] = await Promise.all([
+      gasCall('getPkData', monthKey || State.activePkMonth || null),
+      gasCall('getPkPhotos').catch(()=>({covers:{},matches:{}}))
+    ]);
     if(res && !res.error){
       _pkCache = res.list || [];
       State.pkMonths = res.months || [];
       State.activePkMonth = res.month || State.activePkMonth;
     } else { _pkCache = []; toast((res&&res.error)||'ໂຫລດຂໍ້ມູນ PK ບໍ່ສຳເລັດ','error'); }
+    State.pkPhotos = photos;
   }catch(e){ _pkCache = []; toast(e.message||'ໂຫລດຂໍ້ມູນ PK ບໍ່ສຳເລັດ','error'); }
-  try{ State.pkPhotos = await gasCall('getPkPhotos'); }catch(e){ State.pkPhotos = {covers:{},matches:{}}; }
   _pkLoading = false;
-  if(State.view==='pk'){ document.getElementById('main').innerHTML = renderPk(); afterRenderHook(); }
+  if(State.view==='pk' || State.view==='admin-pk'){ document.getElementById('main').innerHTML = (State.view==='pk'?renderPk():renderAdminPk()); afterRenderHook(); }
 }
 function renderPk(){
   if(!_pkCache && !_pkLoading){ fetchPkData(); return skeletonHtml(); }

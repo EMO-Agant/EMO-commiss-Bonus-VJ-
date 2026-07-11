@@ -3089,8 +3089,11 @@ function renderCashBonus(){
         </div>
         <div class="vj-info">
           <div class="name">${escapeHtml(v.bigoId)}</div>
-          <div class="meta">${BEAN_IMG_SM} ${fmtInt(v.sbeans)} ·📅 ${v.validDay} ມື້ ·🕐 ${v.validHour} ຊ.ມ.
-            ${v.met?'':`<span class="text-coral">· ${escapeHtml(v.reason||'')}</span>`}
+          <div class="meta" style="display:block; line-height:1.5;">
+            <div>${BEAN_IMG_SM} ${fmtInt(v.sbeans)}</div>
+            <div>📅 ${v.validDay} ມື້ · 🕐 ${v.validHour} ຊ.ມ.
+              ${v.met?'':`<span class="text-coral">· ${escapeHtml(v.reason||'')}</span>`}
+            </div>
           </div>
         </div>
         <div class="vj-amount">

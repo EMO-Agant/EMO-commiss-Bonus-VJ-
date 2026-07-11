@@ -590,6 +590,8 @@ const BEAN_IMG_MD  = `<img src="${BEAN_IMG_URL}" style="width:18px;height:18px;o
 ============================================================================ */
 const State = {
   isAdmin: false,
+  adminRole: localStorage.getItem('emo_admin_role') || null,
+  adminName: localStorage.getItem('emo_admin_name') || '',
   adminPassword: null,
   theme: JSON.parse(localStorage.getItem('emo_theme') || 'null') || {
     ink:'#0B1220', ink2:'#101A2E', ink3:'#16223B', line:'#233153',
@@ -750,7 +752,8 @@ async function gasCall(fnName, ...args){
     'saveThemeSettings','resetThemeSettings','saveBannersData',
     'askEmoAssistant',
     'adminSaveVjPhoto','adminDeleteVjPhoto',
-    'adminSavePkCoverPhoto','adminSavePkMatchPhoto','adminDeletePkMatchPhoto'
+    'adminSavePkCoverPhoto','adminSavePkMatchPhoto','adminDeletePkMatchPhoto',
+    'adminLoginV2','adminSaveAdminAccount','adminDeleteAdminAccount',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -799,16 +802,22 @@ const USER_NAV = [
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
 ];
 const TABBAR_NAV = USER_NAV.filter(n => n.id !== 'lookup' && n.id !== 'emo');
-const ADMIN_NAV = [
-  { id:'admin-dashboard', label:'ພາບລວມ', icon:'📊' },
-  { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅' },
-  { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖' },
-  { id:'admin-pk', label:'ຈັດການ PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">' },
-  { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅' },
-  { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱' },
-  { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠' },
-  { id:'admin-settings', label:'ຕັ້ງຄ່າ & ສີ', icon:'⚙️' },
+
+const ADMIN_NAV_ALL = [
+  { id:'admin-dashboard', label:'ພາບລວມ', icon:'📊', roles:['CEO'] },
+  { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅', roles:['CEO'] },
+  { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖', roles:['CEO','Manager','Admin'] },
+  { id:'admin-pk', label:'ຈັດການ PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', roles:['CEO','Manager','Admin'] },
+  { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅', roles:['CEO','Manager','Admin'] },
+  { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱', roles:['CEO','Manager','Admin'] },
+  { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠', roles:['CEO','Manager','Admin'] },
+  { id:'admin-settings', label:'ຕັ້ງຄ່າ & ສີ', icon:'⚙️', roles:['CEO'] },
+  { id:'admin-manage-admins', label:'ຈັດການ Admin', icon:'👤', roles:['CEO'] },
 ];
+function getVisibleAdminNav(){
+  const role = State.adminRole || 'CEO';
+  return ADMIN_NAV_ALL.filter(n => n.roles.includes(role));
+}
 
 function setView(view, opts){
   State.view = view;
@@ -1073,7 +1082,7 @@ function renderShell(){
   const sideAdmin = document.getElementById('sideLinksAdmin');
   sideUser.innerHTML = `<div class="side-section-label">VJ</div>` + USER_NAV.map(n => sideLinkHtml(n)).join('');
   if(State.isAdmin){
-    sideAdmin.innerHTML = `<div class="side-section-label">Admin</div>` + ADMIN_NAV.map(n => sideLinkHtml(n)).join('');
+    sideAdmin.innerHTML = `<div class="side-section-label">Admin</div>` + getVisibleAdminNav().map(n => sideLinkHtml(n)).join('');
   } else {
     sideAdmin.innerHTML = '';
   }
@@ -1088,7 +1097,7 @@ function renderShell(){
   const drawerLinks = document.getElementById('drawerLinks');
   let dh = `<div class="section-label">ສຳລັບ VJ</div>` + USER_NAV.map(n => drawerLinkHtml(n)).join('');
   if(State.isAdmin){
-    dh += `<div class="drawer-divider"></div><div class="section-label">Admin</div>` + ADMIN_NAV.map(n => drawerLinkHtml(n)).join('');
+    dh += `<div class="drawer-divider"></div><div class="section-label">Admin</div>` + getVisibleAdminNav().map(n => drawerLinkHtml(n)).join('');
     dh += `<div class="drawer-divider"></div><button class="drawer-link" onclick="adminLogout(); closeDrawer();">${ICONS.logout}ອອກຈາກ Admin</button>`;
   } else {
     dh += `<div class="drawer-divider"></div><button class="drawer-link" onclick="setView('admin-login'); closeDrawer();">${ICONS.lock}ເຂົ້າສູ່ລະບົບ Admin</button>`;
@@ -1118,15 +1127,19 @@ function closeDrawer(){ document.getElementById('overlay').classList.remove('sho
 ============================================================================ */
 async function adminLoginSubmit(password){
   try{
-    const res = await gasCall('adminLogin', password);
+    const res = await gasCall('adminLoginV2', State.adminName, password);
     if(res.ok){
       State.isAdmin = true;
       State.adminPassword = password;
+      State.adminRole = res.role;
+      State.adminName = res.name;
       sessionStorage.setItem('emo_admin_pw', password);
+      localStorage.setItem('emo_admin_role', res.role);
+      localStorage.setItem('emo_admin_name', res.name);
       startLoginNotificationPolling();
-      toast('ເຂົ້າສູ່ລະບົບ Admin ສຳເລັດ', 'success');
+      toast('ເຂົ້າສູ່ລະບົບ Admin ສຳເລັດ (' + res.role + ')', 'success');
       renderShell();
-      setView('admin-dashboard');
+      setView(res.role==='CEO' ? 'admin-dashboard' : 'admin-vj');
     } else {
       toast(res.error || 'ລະຫັດບໍ່ຖືກຕ້ອງ', 'error');
     }
@@ -1141,6 +1154,8 @@ function adminLogout(){
   toast('ອອກຈາກລະບົບ Admin ແລ້ວ', 'info');
   renderShell();
   setView('home');
+  localStorage.removeItem('emo_admin_role');
+  localStorage.removeItem('emo_admin_name');
 }
 
 /* ============================================================================
@@ -1177,13 +1192,14 @@ function render(){
     case 'emo': main.innerHTML = renderEmoAssistant(); break;
     case 'cashbonus': main.innerHTML = renderCashBonus(); break;
     case 'admin-login': main.innerHTML = renderAdminLogin(); break;
-    case 'admin-dashboard': main.innerHTML = State.isAdmin ? renderAdminDashboard() : renderAdminLogin(); break;
-    case 'admin-months': main.innerHTML = State.isAdmin ? renderAdminMonths() : renderAdminLogin(); break;
     case 'admin-vj': main.innerHTML = State.isAdmin ? renderAdminVjManage() : renderAdminLogin(); break;
     case 'admin-banners': main.innerHTML = State.isAdmin ? renderAdminBanners() : renderAdminLogin(); break;
     case 'admin-vjphone': main.innerHTML = State.isAdmin ? renderAdminVjPhone() : renderAdminLogin(); break;
     case 'admin-emo-kb': main.innerHTML = State.isAdmin ? renderAdminEmoKb() : renderAdminLogin(); break;
-    case 'admin-settings': main.innerHTML = State.isAdmin ? renderAdminSettings() : renderAdminLogin(); break;
+    case 'admin-manage-admins': main.innerHTML = (State.isAdmin && State.adminRole==='CEO') ? renderAdminManageAdmins() : renderAdminLogin(); break;
+    case 'admin-dashboard': main.innerHTML = (State.isAdmin && State.adminRole==='CEO') ? renderAdminDashboard() : (State.isAdmin ? renderAdminVjManage() : renderAdminLogin()); break;
+    case 'admin-months': main.innerHTML = (State.isAdmin && State.adminRole==='CEO') ? renderAdminMonths() : renderAdminLogin(); break;
+    case 'admin-settings': main.innerHTML = (State.isAdmin && State.adminRole==='CEO') ? renderAdminSettings() : renderAdminLogin(); break;
     default: main.innerHTML = renderHome();
   }
   main.classList.remove('fade-in'); void main.offsetWidth; main.classList.add('fade-in');
@@ -1278,8 +1294,8 @@ async function bootApp(){
   try {
     await Promise.all([
       sessionStorage.getItem('emo_admin_pw')
-        ? gasCall('adminLogin', sessionStorage.getItem('emo_admin_pw'))
-            .then(res => { if(res.ok){ State.isAdmin = true; State.adminPassword = sessionStorage.getItem('emo_admin_pw'); startLoginNotificationPolling(); } })
+        ? gasCall('adminLoginV2', State.adminName, sessionStorage.getItem('emo_admin_pw'))
+            .then(res => { if(res.ok){ State.isAdmin = true; State.adminPassword = sessionStorage.getItem('emo_admin_pw'); State.adminRole = res.role; State.adminName = res.name; startLoginNotificationPolling(); } })
             .catch(()=>{})
         : Promise.resolve(),
 
@@ -2223,6 +2239,104 @@ function renderAdminVjPhone(){
       <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="openVjPhoneFormModal(null)">${ICONS.plus} ເພີ່ມ VJ</button>
     </div>
     <div class="card" id="vjPhoneList" style="padding:8px;">${renderVjPhoneListInner()}</div>`;
+}
+
+let _adminListCache = null;
+async function fetchAdminList(){
+  try{ _adminListCache = await gasCall('adminGetAdminList', State.adminPassword); }
+  catch(e){ toast(e.message || 'ໂຫລດລາຍຊື່ Admin ບໍ່ສຳເລັດ','error'); _adminListCache = []; }
+  if(State.view === 'admin-manage-admins'){ document.getElementById('main').innerHTML = renderAdminManageAdmins(); afterRenderHook(); }
+}
+function renderAdminManageAdmins(){
+  if(_adminListCache === null){ fetchAdminList(); return skeletonHtml(); }
+  const list = _adminListCache || [];
+  const roleBadge = r => {
+    const c = r==='CEO' ? {bg:'rgba(245,184,46,0.15)',color:'var(--gold)'} : r==='Manager' ? {bg:'rgba(45,212,168,0.15)',color:'var(--mint)'} : {bg:'rgba(111,183,255,0.15)',color:'var(--ice)'};
+    return `<span style="background:${c.bg};color:${c.color};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">${r}</span>`;
+  };
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">Admin</p>
+      <h1>👤 ຈັດການ Admin</h1>
+      <p>ຈັດການບັນຊີ Admin ແລະ ກຳນົດລະດັບສິດເຂົ້າເຖິງລະບົບ — ${list.length} ຄົນ</p>
+    </div>
+    <div class="card" style="margin-bottom:14px; background:rgba(245,184,46,0.06); border-color:rgba(245,184,46,0.25);">
+      <p style="font-size:12.5px; color:var(--text-mid); margin:0; line-height:1.7;">
+        👑 <b>CEO</b> — ເຂົ້າໄດ້ທຸກໜ້າ (ພາບລວມ, ຈັດການເດືອນ, ຕັ້ງຄ່າ&ສີ, ຈັດການ Admin ແລະ ອື່ນໆ)<br>
+        👔 <b>Manager</b> — ເບິ່ງ/ຈັດການ VJ, PK, ແບນເນີ້, ເບີໂທ, ຄວາມຮູ້ EMO (ບໍ່ເຫັນພາບລວມ/ຕັ້ງຄ່າ)<br>
+        🧑‍💼 <b>Admin</b> — ຈັດການ VJ, PK, ແບນເນີ້, ເບີໂທ, ຄວາມຮູ້ EMO (ຄືກັນ Manager)
+      </p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openAdminAccountFormModal(null)">${ICONS.plus} ເພີ່ມ Admin ໃໝ່</button>
+    <div class="section-label">ລາຍຊື່ Admin</div>
+    <div class="card" style="padding:8px;">
+      ${list.length ? list.map(a => `
+        <div class="vj-row">
+          <div class="vj-avatar">${initials(a.name)}</div>
+          <div class="vj-info">
+            <div class="name">${escapeHtml(a.name)}</div>
+            <div class="meta">${roleBadge(a.role)} <span class="mono text-low">••••••••</span></div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="icon-btn" onclick='openAdminAccountFormModal(${JSON.stringify(a).replace(/'/g,"&#39;")})'>${ICONS.edit}</button>
+            <button class="icon-btn" style="color:var(--coral);" onclick="confirmDeleteAdminAccount(${a.rowIndex}, '${escapeHtml(a.name)}')">${ICONS.trash}</button>
+          </div>
+        </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ Admin ເພີ່ມເຕີມ — ໃຊ້ Master Password ໄດ້ໃນຖານະ CEO</p></div>`}
+    </div>`;
+}
+function openAdminAccountFormModal(a){
+  const isEdit = !!a;
+  a = a || {};
+  openModal(`
+    <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂ Admin':'ເພີ່ມ Admin ໃໝ່'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <form id="adminAccountForm">
+      <div class="field"><label>ຊື່ *</label><input data-key="name" type="text" value="${escapeHtml(a.name||'')}" required></div>
+      <div class="field"><label>ລະຫັດຜ່ານ *</label><input data-key="password" type="text" value="${escapeHtml(a.password||'')}" required></div>
+      <div class="field">
+        <label>ສິດເຂົ້າເຖິງ *</label>
+        <select data-key="role">
+          <option value="CEO" ${a.role==='CEO'?'selected':''}>👑 CEO (ເຫັນທຸກຢ່າງ)</option>
+          <option value="Manager" ${a.role==='Manager'?'selected':''}>👔 Manager</option>
+          <option value="Admin" ${(!a.role||a.role==='Admin')?'selected':''}>🧑‍💼 Admin</option>
+        </select>
+      </div>
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitAdminAccountForm(${isEdit?a.rowIndex:-1})">${ICONS.check} ບັນທຶກ</button>
+    </div>`);
+}
+async function submitAdminAccountForm(rowIndex){
+  const inputs = document.querySelectorAll('#adminAccountForm [data-key]');
+  const payload = {};
+  inputs.forEach(inp => payload[inp.dataset.key] = inp.value.trim());
+  if(!payload.name || !payload.password){ toast('ກະລຸນາປ້ອນຊື່ ແລະ ລະຫັດຜ່ານ','error'); return; }
+  if(rowIndex && rowIndex > 1) payload.rowIndex = rowIndex;
+  try{
+    await gasCall('adminSaveAdminAccount', State.adminPassword, payload);
+    toast('ບັນທຶກສຳເລັດ','success');
+    closeModal();
+    _adminListCache = null;
+    fetchAdminList();
+  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+function confirmDeleteAdminAccount(rowIndex, name){
+  openModal(`
+    <div class="modal-head"><h3>ລຶບ Admin?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <p class="text-low">ລຶບບັນຊີ <b style="color:var(--text-hi);">${escapeHtml(name)}</b> ຖາວອນ.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-danger" onclick="submitDeleteAdminAccount(${rowIndex})">${ICONS.trash} ລຶບເລີຍ</button>
+    </div>`);
+}
+async function submitDeleteAdminAccount(rowIndex){
+  try{
+    await gasCall('adminDeleteAdminAccount', State.adminPassword, rowIndex);
+    toast('ລຶບສຳເລັດ','success');
+    closeModal();
+    _adminListCache = null;
+    fetchAdminList();
+  }catch(err){ toast(err.message || 'ລຶບບໍ່ສຳເລັດ','error'); }
 }
 
 function renderVjPhoneListInner(){

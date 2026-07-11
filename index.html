@@ -3067,11 +3067,32 @@ function renderPk(){
                 </div>
                 <span class="text-low mono" style="font-size:11px;">${escapeHtml(r.time)}</span>
               </div>
-              ${m ? `<div style="display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:8px;">
-                <img src="${escapeHtml(m.urlA||'')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);" onerror="this.style.opacity=0.2">
-                <span style="font-weight:800; color:var(--text-low);">VS</span>
-                <img src="${escapeHtml(m.urlB||'')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--ice);" onerror="this.style.opacity=0.2">
+              ${m ? `
+              <div style="display:flex; align-items:flex-start; justify-content:center; gap:20px; margin:6px 0 10px;">
+                <div style="text-align:center; width:110px;">
+                  <div style="position:relative; display:inline-block;">
+                    <img src="${escapeHtml(m.urlA||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);" onerror="this.style.opacity=0.2">
+                    ${m.resultA ? `<img src="${m.resultA==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:36px;">` : ''}
+                  </div>
+                  <div style="font-weight:700;font-size:12.5px;margin-top:12px;">${escapeHtml(r.vjName||r.bigoId)}</div>
+                  <div class="text-low mono" style="font-size:10.5px;">${escapeHtml(r.bigoId)}</div>
+                </div>
+                <div style="align-self:center;font-weight:800;color:var(--text-low);margin-top:30px;">PK</div>
+                <div style="text-align:center; width:110px;">
+                  <div style="position:relative; display:inline-block;">
+                    <img src="${escapeHtml(m.urlB||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--ice);" onerror="this.style.opacity=0.2">
+                    ${m.resultB ? `<img src="${m.resultB==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:36px;">` : ''}
+                  </div>
+                  <div style="font-weight:700;font-size:12.5px;margin-top:12px;">${escapeHtml(m.vjB||'-')}</div>
+                  <div class="text-low mono" style="font-size:10.5px;">${escapeHtml(m.idB||'-')}${m.agencyB?(' · '+escapeHtml(m.agencyB)):''}</div>
+                </div>
+              </div>
+              ${(m.scoreA||m.scoreB) ? `
+              <div style="display:flex;height:26px;border-radius:8px;overflow:hidden;margin-bottom:10px;font-family:var(--f-mono);font-size:12px;font-weight:700;">
+                <div style="flex:${Math.max(m.scoreA||0,1)};background:var(--gold);color:#21170a;display:flex;align-items:center;justify-content:center;">${fmtInt(m.scoreA)}</div>
+                <div style="flex:${Math.max(m.scoreB||0,1)};background:var(--ice);color:#0B1220;display:flex;align-items:center;justify-content:center;">${fmtInt(m.scoreB)}</div>
               </div>` : ''}
+              ` : ''}
               <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; font-size:11.5px;">
                 <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">Battle Royal</div><div>${fmtInt(r.brBeans)} → <b class="text-gold">${fmtInt(r.brBonus)}</b></div></div>
                 <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">Super PK</div><div>${fmtInt(r.spBeans)} → <b class="text-gold">${fmtInt(r.spBonus)}</b></div></div>
@@ -3122,13 +3143,38 @@ function openPkMatchModal(dateKey, bigoId){
   openModal(`
     <div class="modal-head"><h3>ຮູບຄູ່ PK — ${escapeHtml(bigoId)}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
     <div class="field"><label>ຊື່ຄູ່ຕໍ່ສູ້</label><input id="pkVjB" type="text" value="${escapeHtml(cur.vjB||'')}"></div>
+    <div class="field"><label>Bigo ID ຄູ່ຕໍ່ສູ້</label><input id="pkIdB" type="text" value="${escapeHtml(cur.idB||'')}"></div>
+    <div class="field"><label>ສັງກັດຄູ່ຕໍ່ສູ້</label><input id="pkAgencyB" type="text" value="${escapeHtml(cur.agencyB||'')}"></div>
     <div class="field"><label>URL ຮູບຝ່າຍເຮົາ</label><input id="pkUrlA" type="text" value="${escapeHtml(cur.urlA||'')}"></div>
     <div class="field"><label>URL ຮູບຄູ່ຕໍ່ສູ້</label><input id="pkUrlB" type="text" value="${escapeHtml(cur.urlB||'')}"></div>
+    <div class="field-row">
+      <div class="field"><label>ຜົນ ຝ່າຍເຮົາ</label><select id="pkResultA">
+        <option value="WIN" ${cur.resultA==='WIN'?'selected':''}>WIN</option>
+        <option value="LOSE" ${cur.resultA==='LOSE'?'selected':''}>LOSE</option></select></div>
+      <div class="field"><label>ຜົນ ຄູ່ຕໍ່ສູ້</label><select id="pkResultB">
+        <option value="WIN" ${cur.resultB==='WIN'?'selected':''}>WIN</option>
+        <option value="LOSE" ${cur.resultB==='LOSE'?'selected':''}>LOSE</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ຄະແນນ ຝ່າຍເຮົາ</label><input id="pkScoreA" type="number" value="${cur.scoreA||0}"></div>
+      <div class="field"><label>ຄະແນນ ຄູ່ຕໍ່ສູ້</label><input id="pkScoreB" type="number" value="${cur.scoreB||0}"></div>
+    </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
       <button class="btn btn-primary" onclick="submitPkMatch('${dateKey}','${bigoId}','${mid}')">${ICONS.check} ບັນທຶກ</button></div>`);
 }
 async function submitPkMatch(dateKey, bigoId, mid){
-  const payload = { vjA:bigoId, vjB:document.getElementById('pkVjB').value.trim(), urlA:document.getElementById('pkUrlA').value.trim(), urlB:document.getElementById('pkUrlB').value.trim() };
+  const payload = {
+    vjA: bigoId,
+    vjB: document.getElementById('pkVjB').value.trim(),
+    idB: document.getElementById('pkIdB').value.trim(),
+    agencyB: document.getElementById('pkAgencyB').value.trim(),
+    urlA: document.getElementById('pkUrlA').value.trim(),
+    urlB: document.getElementById('pkUrlB').value.trim(),
+    resultA: document.getElementById('pkResultA').value,
+    resultB: document.getElementById('pkResultB').value,
+    scoreA: Number(document.getElementById('pkScoreA').value)||0,
+    scoreB: Number(document.getElementById('pkScoreB').value)||0,
+  };
   try{
     await gasCall('adminSavePkMatchPhoto', State.adminPassword, dateKey, mid, payload);
     if(!State.pkPhotos.matches) State.pkPhotos.matches={};

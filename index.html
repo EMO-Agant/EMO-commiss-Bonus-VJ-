@@ -619,6 +619,7 @@ const State = {
   _liveSearchId: '',
   liveMonths: [],
   activeLiveMonth: null,
+  activePkMonth: null, pkMonths: [], pkPhotos: {covers:{},matches:{}},
 };
 
 function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -742,7 +743,8 @@ async function gasCall(fnName, ...args){
     'adminSaveVj','adminDeleteVj','adminBulkImportVj',
     'saveThemeSettings','resetThemeSettings','saveBannersData',
     'askEmoAssistant',
-    'adminSaveVjPhoto','adminDeleteVjPhoto'
+    'adminSaveVjPhoto','adminDeleteVjPhoto',
+    'adminSavePkCoverPhoto','adminSavePkMatchPhoto','adminDeletePkMatchPhoto'
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -785,6 +787,7 @@ const USER_NAV = [
   { id:'livedata', label:'Live Data', icon:'🎯'},
   { id:'newvjactive', label:'New VJ Active', icon:'🌟'},
   { id:'cashbonus', label:'ໂບນັດເງິນສົດ', icon:'💰'},
+  { id:'pk', label:'PK', icon:'⚔️'},
   { id:'leaderboard', label:'ອັນດັບ VJ', icon:'🏆'},
   { id:'emo', label:'ນ້ອງ EMO', icon:'<img src="https://i.postimg.cc/PqLv8TVW/ນ-ອງ-EMO-i-CON.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
@@ -794,6 +797,7 @@ const ADMIN_NAV = [
   { id:'admin-dashboard', label:'ພາບລວມ', icon:'📊' },
   { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅' },
   { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖' },
+  { id:'admin-pk', label:'ຈັດການ PK', icon:'⚔️' },
   { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅' },
   { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱' },
   { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠' },
@@ -1162,6 +1166,8 @@ function render(){
     case 'lookup': main.innerHTML = renderLookup(); break;
     case 'livedata': main.innerHTML = renderVjLiveData(); break;
     case 'newvjactive': main.innerHTML = renderNewVjActive(); break;
+    case 'pk': main.innerHTML = renderPk(); break;
+    case 'admin-pk': main.innerHTML = State.isAdmin ? renderAdminPk() : renderAdminLogin(); break;
     case 'emo': main.innerHTML = renderEmoAssistant(); break;
     case 'cashbonus': main.innerHTML = renderCashBonus(); break;
     case 'admin-login': main.innerHTML = renderAdminLogin(); break;
@@ -2994,6 +3000,136 @@ function renderCashBonus(){
     <div class="card" style="padding:8px;">
       ${oldList.length ? oldList.map(row).join('') : `<div class="empty-state" style="padding:24px;"><p>ບໍ່ມີວີເຈເກົ່າຮອດເງື່ອນໄຂ</p></div>`}
     </div>`;
+}
+
+let _pkCache = null;
+let _pkLoading = false;
+async function fetchPkData(monthKey){
+  if(_pkLoading) return;
+  _pkLoading = true;
+  try{
+    const res = await gasCall('getPkData', monthKey || State.activePkMonth || null);
+    if(res && !res.error){
+      _pkCache = res.list || [];
+      State.pkMonths = res.months || [];
+      State.activePkMonth = res.month || State.activePkMonth;
+    } else { _pkCache = []; toast((res&&res.error)||'ໂຫລດຂໍ້ມູນ PK ບໍ່ສຳເລັດ','error'); }
+  }catch(e){ _pkCache = []; toast(e.message||'ໂຫລດຂໍ້ມູນ PK ບໍ່ສຳເລັດ','error'); }
+  try{ State.pkPhotos = await gasCall('getPkPhotos'); }catch(e){ State.pkPhotos = {covers:{},matches:{}}; }
+  _pkLoading = false;
+  if(State.view==='pk'){ document.getElementById('main').innerHTML = renderPk(); afterRenderHook(); }
+}
+function renderPk(){
+  if(!_pkCache && !_pkLoading){ fetchPkData(); return skeletonHtml(); }
+  if(_pkLoading && !_pkCache) return skeletonHtml();
+  const list = _pkCache || [];
+  const photos = State.pkPhotos || {covers:{},matches:{}};
+  // ຈັດກຸ່ມຕາມວັນທີ
+  const byDate = {};
+  list.forEach(r=>{ (byDate[r.date] = byDate[r.date]||[]).push(r); });
+  const dates = Object.keys(byDate).sort().reverse();
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">ກິດຈະກຳ</p><h1>⚔️ PK Battle Royal / Super PK</h1>
+      <p>ໂບນັດ PK ແຕ່ລະປະເພດ — ອັບເດດຈາກ Google Sheet</p>
+    </div>
+    ${State.pkMonths && State.pkMonths.length ? `<div class="chip-row">${State.pkMonths.map(m=>`<button class="chip ${m===State.activePkMonth?'active':''}" onclick="State.activePkMonth='${m}'; _pkCache=null; fetchPkData('${m}');">${escapeHtml(m)}</button>`).join('')}</div>` : ''}
+    ${!dates.length ? emptyStateHtml('inbox','ຍັງບໍ່ມີຂໍ້ມູນ PK','ຍັງບໍ່ມີການແຂ່ງ PK ໃນເດືອນນີ້') : dates.map(d=>{
+      const rows = byDate[d];
+      const covers = (photos.covers && photos.covers[d]) || {};
+      const matches = (photos.matches && photos.matches[d]) || {};
+      return `
+        <div class="section-label">📅 ${escapeHtml(d)}</div>
+        <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;">
+          ${rows.map(r=>{
+            const cUrl = covers[String(r.bigoId).toLowerCase()] || '';
+            return `<div style="flex-shrink:0; width:84px; text-align:center;">
+              <div style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:2px solid var(--gold); margin:0 auto 4px; background:var(--ink-3); display:flex;align-items:center;justify-content:center;">
+                ${cUrl?`<img src="${escapeHtml(cUrl)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`:initials(r.bigoId)}
+              </div>
+              <div style="font-size:10.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(r.bigoId)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="card" style="padding:8px;">
+          ${rows.map(r=>{
+            const mid = r.date+'_'+r.bigoId;
+            const m = matches[mid];
+            return `
+            <div style="padding:12px 6px; border-bottom:1px solid var(--line);">
+              <div class="flex-between" style="margin-bottom:6px;">
+                <b style="font-size:13.5px;">${escapeHtml(r.vjName||r.bigoId)}</b>
+                <span class="text-low mono" style="font-size:11px;">${escapeHtml(r.time)}</span>
+              </div>
+              ${m ? `<div style="display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:8px;">
+                <img src="${escapeHtml(m.urlA||'')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);" onerror="this.style.opacity=0.2">
+                <span style="font-weight:800; color:var(--text-low);">VS</span>
+                <img src="${escapeHtml(m.urlB||'')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--ice);" onerror="this.style.opacity=0.2">
+              </div>` : ''}
+              <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; font-size:11.5px;">
+                <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">Battle Royal</div><div>${fmtInt(r.brBeans)} → <b class="text-gold">${fmtInt(r.brBonus)}</b></div></div>
+                <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">Super PK</div><div>${fmtInt(r.spBeans)} → <b class="text-gold">${fmtInt(r.spBonus)}</b></div></div>
+                <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">3v3</div><div>${fmtInt(r.sp3Beans)} → <b class="text-gold">${fmtInt(r.sp3Bonus)}</b></div></div>
+              </div>
+              <div style="text-align:right; margin-top:6px; font-weight:700; color:var(--gold);">ລວມ: ${fmtInt(r.totalBonus)} ຖົ່ວ</div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }).join('')}`;
+}
+
+function renderAdminPk(){
+  if(!_pkCache && !_pkLoading){ fetchPkData(); return skeletonHtml(); }
+  const list = _pkCache || [];
+  return `
+    <div class="page-head fade-in"><p class="eyebrow">Admin</p><h1>⚔️ ຈັດການຮູບ PK</h1><p>ອັບໂຫລດຮູບໜ້າປົກ ແລະ ຮູບຄູ່ PK ຂອງແຕ່ລະວີເຈ</p></div>
+    ${list.length ? list.map(r=>`
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:10px;"><b>${escapeHtml(r.vjName||r.bigoId)} — ${escapeHtml(r.date)}</b></div>
+        <div class="field-row">
+          <button class="btn btn-ghost btn-sm" onclick="openPkCoverModal('${r.date}','${r.bigoId}')">📸 ຮູບໜ້າປົກ</button>
+          <button class="btn btn-ghost btn-sm" onclick="openPkMatchModal('${r.date}','${r.bigoId}')">⚔️ ຮູບຄູ່ PK</button>
+        </div>
+      </div>`).join('') : emptyStateHtml('inbox','ບໍ່ມີຂໍ້ມູນ','ຍັງບໍ່ມີແຖວ PK ໃນເດືອນນີ້')}`;
+}
+function openPkCoverModal(dateKey, bigoId){
+  const cur = (State.pkPhotos.covers && State.pkPhotos.covers[dateKey] && State.pkPhotos.covers[dateKey][bigoId.toLowerCase()]) || '';
+  openModal(`
+    <div class="modal-head"><h3>ຮູບໜ້າປົກ — ${escapeHtml(bigoId)}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <div class="field"><label>URL ຮູບ (Google Drive/link ໂດຍກົງ)</label><input id="pkCoverUrl" type="text" value="${escapeHtml(cur)}"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitPkCover('${dateKey}','${bigoId}')">${ICONS.check} ບັນທຶກ</button></div>`);
+}
+async function submitPkCover(dateKey, bigoId){
+  const url = document.getElementById('pkCoverUrl').value.trim();
+  try{
+    await gasCall('adminSavePkCoverPhoto', State.adminPassword, dateKey, bigoId, url);
+    if(!State.pkPhotos.covers) State.pkPhotos.covers={};
+    if(!State.pkPhotos.covers[dateKey]) State.pkPhotos.covers[dateKey]={};
+    State.pkPhotos.covers[dateKey][bigoId.toLowerCase()] = url;
+    toast('ບັນທຶກຮູບໜ້າປົກສຳເລັດ','success'); closeModal();
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+function openPkMatchModal(dateKey, bigoId){
+  const mid = dateKey+'_'+bigoId;
+  const cur = (State.pkPhotos.matches && State.pkPhotos.matches[dateKey] && State.pkPhotos.matches[dateKey][mid]) || {};
+  openModal(`
+    <div class="modal-head"><h3>ຮູບຄູ່ PK — ${escapeHtml(bigoId)}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <div class="field"><label>ຊື່ຄູ່ຕໍ່ສູ້</label><input id="pkVjB" type="text" value="${escapeHtml(cur.vjB||'')}"></div>
+    <div class="field"><label>URL ຮູບຝ່າຍເຮົາ</label><input id="pkUrlA" type="text" value="${escapeHtml(cur.urlA||'')}"></div>
+    <div class="field"><label>URL ຮູບຄູ່ຕໍ່ສູ້</label><input id="pkUrlB" type="text" value="${escapeHtml(cur.urlB||'')}"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitPkMatch('${dateKey}','${bigoId}','${mid}')">${ICONS.check} ບັນທຶກ</button></div>`);
+}
+async function submitPkMatch(dateKey, bigoId, mid){
+  const payload = { vjA:bigoId, vjB:document.getElementById('pkVjB').value.trim(), urlA:document.getElementById('pkUrlA').value.trim(), urlB:document.getElementById('pkUrlB').value.trim() };
+  try{
+    await gasCall('adminSavePkMatchPhoto', State.adminPassword, dateKey, mid, payload);
+    if(!State.pkPhotos.matches) State.pkPhotos.matches={};
+    if(!State.pkPhotos.matches[dateKey]) State.pkPhotos.matches[dateKey]={};
+    State.pkPhotos.matches[dateKey][mid] = payload;
+    toast('ບັນທຶກຮູບຄູ່ PK ສຳເລັດ','success'); closeModal();
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
 async function runConnectionCheck() {

@@ -787,7 +787,7 @@ const USER_NAV = [
   { id:'livedata', label:'Live Data', icon:'🎯'},
   { id:'newvjactive', label:'New VJ Active', icon:'🌟'},
   { id:'cashbonus', label:'ໂບນັດເງິນສົດ', icon:'💰'},
-  { id:'pk', label:'PK', icon:'⚔️'},
+  { id:'pk', label:'PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'leaderboard', label:'ອັນດັບ VJ', icon:'🏆'},
   { id:'emo', label:'ນ້ອງ EMO', icon:'<img src="https://i.postimg.cc/PqLv8TVW/ນ-ອງ-EMO-i-CON.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
@@ -797,7 +797,7 @@ const ADMIN_NAV = [
   { id:'admin-dashboard', label:'ພາບລວມ', icon:'📊' },
   { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅' },
   { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖' },
-  { id:'admin-pk', label:'ຈັດການ PK', icon:'⚔️' },
+  { id:'admin-pk', label:'ຈັດການ PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">' },
   { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅' },
   { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱' },
   { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠' },
@@ -3030,7 +3030,7 @@ function renderPk(){
   const dates = Object.keys(byDate).sort().reverse();
   return `
     <div class="page-head fade-in">
-      <p class="eyebrow">ກິດຈະກຳ</p><h1>⚔️ PK Battle Royal / Super PK</h1>
+      <p class="eyebrow">ກິດຈະກຳ</p><h1><img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:28px;height:28px;object-fit:contain;vertical-align:-5px;margin-right:6px;"> PK Battle Royal / Super PK</h1>
       <p>ໂບນັດ PK ແຕ່ລະປະເພດ</p>
     </div>
     ${State.pkMonths && State.pkMonths.length ? `<div class="chip-row">${State.pkMonths.map(m=>`<button class="chip ${m===State.activePkMonth?'active':''}" onclick="State.activePkMonth='${m}'; _pkCache=null; fetchPkData('${m}');">${escapeHtml(m)}</button>`).join('')}</div>` : ''}
@@ -3088,7 +3088,7 @@ function renderAdminPk(){
   if(!_pkCache && !_pkLoading){ fetchPkData(); return skeletonHtml(); }
   const list = _pkCache || [];
   return `
-    <div class="page-head fade-in"><p class="eyebrow">Admin</p><h1>⚔️ ຈັດການຮູບ PK</h1><p>ອັບໂຫລດຮູບໜ້າປົກ ແລະ ຮູບຄູ່ PK ຂອງແຕ່ລະວີເຈ</p></div>
+    <div class="page-head fade-in"><p class="eyebrow">Admin</p><h1><img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:28px;height:28px;object-fit:contain;vertical-align:-5px;margin-right:6px;"> ຈັດການຮູບ PK</h1><p>ອັບໂຫລດຮູບໜ້າປົກ ແລະ ຮູບຄູ່ PK ຂອງແຕ່ລະວີເຈ</p></div>
     ${list.length ? list.map(r=>`
       <div class="card">
         <div class="flex-between" style="margin-bottom:10px;"><b>${escapeHtml(r.vjName||r.bigoId)} — ${escapeHtml(r.date)}</b></div>

@@ -1438,7 +1438,7 @@ function vjRowHtml(vj, idx){
       </div>
       <div style="text-align:right;flex-shrink:0;">
         ${State.isAdmin ? `<div style="font-family:var(--f-mono);font-weight:800;font-size:15px;color:${bonus>0?(idx===0?'#C084FC':idx===1?'#90C9FF':idx===2?'#FF9F7A':'var(--gold)'):'var(--text-low)'};${idx===0&&bonus>0?'text-shadow:0 0 12px rgba(192,132,252,0.5);':''}">$${fmtMoney(vj.bonusVjUSD)}</div>` : ''}
-        ${bonus>0?`<div style="font-size:${State.isAdmin?'10.5px':'11px'};color:var(--text-low);margin-top:1px;">ໂບນັດ</div><div style="font-family:${State.isAdmin?'inherit':'var(--f-mono)'};font-size:${State.isAdmin?'10.5px':'14.5px'};font-weight:${State.isAdmin?'400':'800'};color:${State.isAdmin?'var(--text-low)':'var(--gold)'};margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} beans</div>`:''}
+        ${bonus>0?`<div style="font-size:${State.isAdmin?'10.5px':'11px'};color:var(--text-low);margin-top:1px;">ໂບນັດ</div><div style="font-family:${State.isAdmin?'inherit':'var(--f-mono)'};font-size:${State.isAdmin?'10.5px':'14.5px'};font-weight:${State.isAdmin?'400':'800'};color:${State.isAdmin?'var(--text-low)':'var(--gold)'};margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} ຖົ່ວ</div>`:''}
       </div>
     </div>`;
 }
@@ -2838,7 +2838,7 @@ function vjLiveCardHtml(vj) {
         <div style="height:7px;background:var(--ink);border-radius:5px;overflow:hidden;"><div style="height:100%;width:${hoursPct}%;background:${vj.hoursReqMet ? 'linear-gradient(90deg,var(--mint),#1ab88c)' : 'linear-gradient(90deg,var(--coral),var(--gold))' };border-radius:5px;"></div></div>
         ${!vj.hoursReqMet ? `<div style="font-size:10.5px;color:var(--coral);margin-top:3px;">⚠️ ຂາດ ${(vj.reqHours - vj.hoursMonth).toFixed(1)} ຊ.ມ.</div>` : `<div style="font-size:10.5px;color:var(--mint);margin-top:3px;">✅ ຊົ່ວໂມງຄົບ!</div>`}
       </div>
-      ${vj.currentBonus > 0 ? `<div style="background:rgba(245,184,46,0.08);border:1px solid rgba(245,184,46,0.25);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-mid);">🎁 ໂບນັດທີ່ຈະໄດ້ (${vj.currentGrade})${vj.bonusIsPercent ? ` — ${Math.round((vj.currentBonus/vj.beansMonth)*100)}%` : ''}</span><span style="font-family:var(--f-mono);font-weight:700;color:var(--gold);">${fmtInt(vj.currentBonus)} beans</span></div>` : `<div style="background:rgba(255,107,94,0.06);border:1px solid rgba(255,107,94,0.2);border-radius:10px;padding:8px 10px;"><span style="font-size:12px;color:var(--text-low);">ຍັງບໍ່ຮອດ Grade — ຕ້ອງການ ${fmtInt(vj.needBeans)} beans ອີກ (${vj.nextGrade})</span></div>`}
+      ${vj.currentBonus > 0 ? `<div style="background:rgba(245,184,46,0.08);border:1px solid rgba(245,184,46,0.25);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-mid);">🎁 ໂບນັດທີ່ຈະໄດ້ (${vj.currentGrade})${vj.bonusIsPercent ? ` — ${Math.round((vj.currentBonus/vj.beansMonth)*100)}%` : ''}</span><span style="font-family:var(--f-mono);font-weight:700;color:var(--gold);">${fmtInt(vj.currentBonus)} ຖົ່ວ</span></div>` : `<div style="background:rgba(255,107,94,0.06);border:1px solid rgba(255,107,94,0.2);border-radius:10px;padding:8px 10px;"><span style="font-size:12px;color:var(--text-low);">ຍັງບໍ່ຮອດ Grade — ຕ້ອງການ ${fmtInt(vj.needBeans)} ຖົ່ວ ອີກ (${vj.nextGrade})</span></div>`}
       <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:10.5px;color:var(--text-low);"><span>📅 ເລີ່ມ: ${escapeHtml(vj.startDate)}</span></div>
     </div>`;
 }
@@ -2868,7 +2868,7 @@ function newVjActiveStatusTableHtml(vj){
     <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:10px;">
       <thead>
         <tr style="background:var(--ink);">
-          <th style="padding:6px;text-align:left;color:var(--text-low);">ວັນ / ຊົ່ວໂມງ</th>
+          <th style="padding:6px;text-align:left;color:var(--text-low);">📆 ວັນ / ຊົ່ວໂມງ</th>
           <th style="padding:6px;text-align:center;color:var(--text-low);">0≥2,000 ຖົ່ວ</th>
           <th style="padding:6px;text-align:center;color:var(--text-low);">2,000≥10,000 ຖົ່ວ</th>
         </tr>
@@ -2882,7 +2882,7 @@ function newVjActiveStatusTableHtml(vj){
               ? `<span style="color:var(--mint);font-weight:700;">✅ ຜ່ານ</span>`
               : `<span style="color:var(--coral);font-weight:700;">⚠️ ຍັງບໍ່ຜ່ານ</span>`;
           return `<tr style="border-top:1px solid var(--line);">
-            <td style="padding:6px;">${r.days} ມື້ / ${r.hours} ຊ.ມ.</td>
+            <td style="padding:6px;">📅 ${r.days} ມື້ / 🕐 ${r.hours} ຊ.ມ.</td>
             <td style="padding:6px;text-align:center;">${status}</td>
             <td style="padding:6px;text-align:center;">${status}</td>
           </tr>`;
@@ -2932,12 +2932,12 @@ function renderNewVjActiveListInner(){
     <div class="card" style="margin-bottom:10px; padding:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <div class="vj-avatar">${initials(vj.bigoId)}</div>
-        <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">${escapeHtml(vj.vjName||vj.bigoId)}</div><div style="font-size:11.5px;color:var(--text-low);">${escapeHtml(vj.bigoId)} · ເດືອນທີ ${vj.supportMonthIndex} ຂອງການສະໜັບສະໜູນ</div></div>
+        <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">${escapeHtml(vj.vjName||vj.bigoId)}</div><div style="font-size:11.5px;color:var(--text-low);">${escapeHtml(vj.bigoId)} ·📆 ເດືອນທີ ${vj.supportMonthIndex} ຂອງການສະໜັບສະໜູນ</div></div>
         <span style="background:${vj.met?'rgba(45,212,168,0.15)':'rgba(255,107,94,0.12)'};color:${vj.met?'var(--mint)':'var(--coral)'};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${vj.met?'✅ ຜ່ານ':'⚠️ ຍັງບໍ່ຜ່ານ'}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
         <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວປັດຈຸບັນ</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;">${(vj.hoursMonth||0).toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">ຊົ່ວໂມງ</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;">${(vj.hoursMonth||0).toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);"> 🕐 ຊົ່ວໂມງ</div></div>
         <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--mint);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.bonus)}</div><div style="font-size:10px;color:var(--text-low);">ໂບນັດຖົ່ວ</div></div>
       </div>
       ${newVjActiveStatusTableHtml(vj)}

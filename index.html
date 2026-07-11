@@ -3031,7 +3031,7 @@ function renderPk(){
   return `
     <div class="page-head fade-in">
       <p class="eyebrow">ກິດຈະກຳ</p><h1>⚔️ PK Battle Royal / Super PK</h1>
-      <p>ໂບນັດ PK ແຕ່ລະປະເພດ — ອັບເດດຈາກ Google Sheet</p>
+      <p>ໂບນັດ PK ແຕ່ລະປະເພດ</p>
     </div>
     ${State.pkMonths && State.pkMonths.length ? `<div class="chip-row">${State.pkMonths.map(m=>`<button class="chip ${m===State.activePkMonth?'active':''}" onclick="State.activePkMonth='${m}'; _pkCache=null; fetchPkData('${m}');">${escapeHtml(m)}</button>`).join('')}</div>` : ''}
     ${!dates.length ? emptyStateHtml('inbox','ຍັງບໍ່ມີຂໍ້ມູນ PK','ຍັງບໍ່ມີການແຂ່ງ PK ໃນເດືອນນີ້') : dates.map(d=>{
@@ -3043,11 +3043,11 @@ function renderPk(){
         <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;">
           ${rows.map(r=>{
             const cUrl = covers[String(r.bigoId).toLowerCase()] || '';
-            return `<div style="flex-shrink:0; width:84px; text-align:center;">
-              <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;border:2px solid var(--gold); margin:0 auto 4px; background:var(--ink-3); display:flex;align-items:center;justify-content:center;">
+            return `<div style="flex-shrink:0; width:120px; text-align:center;">
+              <div style="width:108px;height:108px;border-radius:16px;overflow:hidden;border:2px solid var(--gold); margin:0 auto 4px; background:var(--ink-3); display:flex;align-items:center;justify-content:center; font-size:28px;">
                 ${cUrl?`<img src="${escapeHtml(cUrl)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`:initials(r.bigoId)}
               </div>
-              <div style="font-size:10.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(r.bigoId)}</div>
+              <div style="font-size:11.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(r.bigoId)}</div>
             </div>`;
           }).join('')}
         </div>
@@ -3055,10 +3055,16 @@ function renderPk(){
           ${rows.map(r=>{
             const mid = r.date+'_'+r.bigoId;
             const m = matches[mid];
+            const _rowPurl = findPhotoUrlByBigoId(r.bigoId);
             return `
             <div style="padding:12px 6px; border-bottom:1px solid var(--line);">
               <div class="flex-between" style="margin-bottom:6px;">
-                <b style="font-size:13.5px;">${escapeHtml(r.vjName||r.bigoId)}</b>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="width:32px;height:32px;border-radius:50%;flex-shrink:0;overflow:hidden;background:var(--ink-3);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-mid);">
+                    ${_rowPurl ? `<img src="${escapeHtml(_rowPurl)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;">${initials(r.bigoId)}</span>` : initials(r.bigoId)}
+                  </div>
+                  <b style="font-size:13.5px;">${escapeHtml(r.vjName||r.bigoId)}</b>
+                </div>
                 <span class="text-low mono" style="font-size:11px;">${escapeHtml(r.time)}</span>
               </div>
               ${m ? `<div style="display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:8px;">

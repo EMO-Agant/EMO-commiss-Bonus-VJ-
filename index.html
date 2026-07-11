@@ -1751,7 +1751,7 @@ function renderVjSearchResultsInner(){
                 <div class="vj-avatar">📆</div>
                 <div class="vj-info">
                   <div class="name">${escapeHtml(h.label)}</div>
-                  <div class="meta">${tierBadgeHtml(h.vj.ticketLevel)} <span>${fmtInt(h.vj.sbeans)} sbeans</span></div>
+                  <div class="meta">${tierBadgeHtml(h.vj.ticketLevel)} <span>${BEAN_IMG_SM} ${fmtInt(h.vj.sbeans)}</span></div>
                 </div>
                 <div class="vj-amount"><div class="usd">$${fmtMoney(h.vj.bonusVjUSD)}</div></div>
               </div>`).join('')}
@@ -2824,7 +2824,7 @@ function vjLiveCardHtml(vj) {
         <div style="text-align:right;flex-shrink:0;"><div style="font-family:var(--f-mono);font-weight:700;font-size:15px;color:${gradeColor};">${vj.currentGrade !== '-' ? vj.currentGrade : '—'}</div><div style="font-size:10.5px;color:var(--text-low);">Grade</div></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);">${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">"https://i.postimg.cc/YSHQ7tBK/Breen.png" ຖົ່ວເດືອນນີ້</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວເດືອນນີ້</div></div>
         <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:${hoursColor};">${vj.hoursMonth.toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">🕐 ຊົ່ວໂມງ/${vj.reqHours}h</div></div>
         <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--text-mid);">${vj.daysLeft}</div><div style="font-size:10px;color:var(--text-low);">📆 ມື້ທີ່ຍັງເຫຼືອ</div></div>
       </div>
@@ -2936,9 +2936,9 @@ function renderNewVjActiveListInner(){
         <span style="background:${vj.met?'rgba(45,212,168,0.15)':'rgba(255,107,94,0.12)'};color:${vj.met?'var(--mint)':'var(--coral)'};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${vj.met?'✅ ຜ່ານ':'⚠️ ຍັງບໍ່ຜ່ານ'}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);">${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວປັດຈຸບັນ</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວປັດຈຸບັນ</div></div>
         <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;">${(vj.hoursMonth||0).toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);">ຊົ່ວໂມງ</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--mint);">${fmtInt(vj.bonus)}</div><div style="font-size:10px;color:var(--text-low);">ໂບນັດຖົ່ວ</div></div>
+        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--mint);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.bonus)}</div><div style="font-size:10px;color:var(--text-low);">ໂບນັດຖົ່ວ</div></div>
       </div>
       ${newVjActiveStatusTableHtml(vj)}
     </div>`).join('');
@@ -2975,7 +2975,7 @@ function renderCashBonus(){
         </div>
         <div class="vj-info">
           <div class="name">${escapeHtml(v.bigoId)}</div>
-          <div class="meta">${fmtInt(v.sbeans)} beans · ${v.validDay} ມື້ · ${v.validHour} ຊ.ມ.
+          <div class="meta">${BEAN_IMG_SM} ${fmtInt(v.sbeans)} · ${v.validDay} ມື້ · ${v.validHour} ຊ.ມ.
             ${v.met?'':`<span class="text-coral">· ${escapeHtml(v.reason||'')}</span>`}
           </div>
         </div>
@@ -3123,7 +3123,7 @@ function renderPk(){
                 <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">Super PK</div><div>${fmtInt(r.spBeans)} → <b class="text-gold">${fmtInt(r.spBonus)}</b></div></div>
                 <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">3v3</div><div>${fmtInt(r.sp3Beans)} → <b class="text-gold">${fmtInt(r.sp3Bonus)}</b></div></div>
               </div>
-              <div style="text-align:right; margin-top:6px; font-weight:800; font-size:16px; color:var(--gold);">ລວມ: ${fmtInt(r.totalBonus)} ຖົ່ວ</div>
+              <div style="text-align:right; margin-top:6px; font-weight:800; font-size:16px; color:var(--gold);">ລວມ: ${BEAN_IMG_SM} ${fmtInt(r.totalBonus)} ຖົ່ວ</div>
               </div>
               </div>`;
           }).join('')}

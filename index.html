@@ -3067,7 +3067,7 @@ function renderPk(){
                 </div>
                 <span class="text-low mono" style="font-size:11px;">${escapeHtml(r.time)}</span>
               </div>
-              <div id="pkbody_${mid}" style="display:none;">
+              <div id="pkbody_${mid}" style="display:block;">
               ${m ? `
               <div style="display:flex; align-items:flex-start; justify-content:center; gap:20px; margin:10px 0 12px; position:relative;">
                 <div style="text-align:center; width:110px;">
@@ -3080,7 +3080,7 @@ function renderPk(){
                 </div>
 
                 <!-- ★ ໄອຄອນ PK ຢູ່ຈຸດກາງລະຫວ່າງ VJ ສອງຄົນ -->
-                <div style="align-self:center; display:flex; flex-direction:column; align-items:center; margin-top:24px;">
+                <div style="align-self:center; display:flex; flex-direction:column; align-items:center; margin-top:20px;">
                   <img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:44px;height:44px;object-fit:contain;">
                 </div>
 
@@ -3096,16 +3096,19 @@ function renderPk(){
 
               ${(m.scoreA||m.scoreB) ? (() => {
                 const aWin = (m.resultA === 'WIN');
-                const colorA = aWin ? 'linear-gradient(90deg,#F5B82E,#D9A65C)' : 'linear-gradient(90deg,#FF6B5E,#C0392B)';
-                const colorB = !aWin ? 'linear-gradient(90deg,#F5B82E,#D9A65C)' : 'linear-gradient(90deg,#FF6B5E,#C0392B)';
+                const colorA = aWin ? 'linear-gradient(90deg,#F5B82E,#D9A65C)' : 'linear-gradient(90deg,#C0392B,#FF6B5E)';
+                const colorB = !aWin ? 'linear-gradient(90deg,#D9A65C,#F5B82E)' : 'linear-gradient(90deg,#FF6B5E,#C0392B)';
                 const star = `<svg viewBox="0 0 24 24" fill="#fff" style="width:16px;height:16px;flex-shrink:0;"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6z"/></svg>`;
+                const totalScore = (m.scoreA||0) + (m.scoreB||0) || 1;
+                const pctA = Math.max(8, Math.round((m.scoreA||0) / totalScore * 100));
+                const pctB = 100 - pctA;
                 return `
-                <div style="display:flex; gap:6px; margin-bottom:10px;">
-                  <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px; height:34px; border-radius:20px; padding:0 12px; background:${colorA}; box-shadow:0 3px 10px rgba(0,0,0,0.15);">
-                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:15px; color:#2a1a05;">${fmtInt(m.scoreA)}</span>
+                <div style="display:flex; height:36px; border-radius:20px; overflow:hidden; margin-bottom:10px; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
+                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 10px; background:${colorA};">
+                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreA)}</span>
                   </div>
-                  <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px; height:34px; border-radius:20px; padding:0 12px; background:${colorB}; box-shadow:0 3px 10px rgba(0,0,0,0.15); flex-direction:row-reverse;">
-                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:15px; color:#2a1a05;">${fmtInt(m.scoreB)}</span>
+                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 10px; background:${colorB}; flex-direction:row-reverse;">
+                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreB)}</span>
                   </div>
                 </div>` ;
               })() : ''}

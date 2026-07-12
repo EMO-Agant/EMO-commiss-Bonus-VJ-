@@ -37,6 +37,8 @@
   --rank1:      #5B21B6;
   --rank2:      #1D4ED8;
   --rank3:      #9A3412;
+  --rank-other-bg:     #16223B;
+  --rank-other-border: #233153;
   --text-hi:    #F4F2ED;
   --text-mid:   #B8C0D6;
   --text-low:   #71799A;
@@ -656,6 +658,8 @@ function applyTheme(t) {
   if(t.rank1)    r.setProperty('--rank1', t.rank1);
   if(t.rank2)    r.setProperty('--rank2', t.rank2);
   if(t.rank3)    r.setProperty('--rank3', t.rank3);
+  if(t.rankOtherBg)     r.setProperty('--rank-other-bg', t.rankOtherBg);
+  if(t.rankOtherBorder) r.setProperty('--rank-other-border', t.rankOtherBorder);
   if(t.tierCLo)  r.setProperty('--tier-c-lo', t.tierCLo);
   if(t.tierCHi)  r.setProperty('--tier-c-hi', t.tierCHi);
   if(t.tierSLo)  r.setProperty('--tier-s-lo', t.tierSLo);
@@ -1434,8 +1438,8 @@ function vjRowHtml(vj, idx){
   const medal = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
   const rankColorList = [State.theme.rank1||'#5B21B6', State.theme.rank2||'#1D4ED8', State.theme.rank3||'#9A3412'];
   const rankColor = rankColorList[idx] || '#5B21B6';
-  const rankBg = idx<3 ? `linear-gradient(135deg, ${rankColor}, ${darkenHex(rankColor,0.45)})` : 'var(--ink-3)';
-  const rankBorder = idx<3 ? rankColor : 'var(--line)';
+  const rankBg = idx<3 ? `linear-gradient(135deg, ${rankColor}, ${darkenHex(rankColor,0.45)})` : 'var(--rank-other-bg)';
+  const rankBorder = idx<3 ? rankColor : 'var(--rank-other-border)';
   const bonus = Number(vj.bonusVjUSD)||0;
   return `
     <div style="display:flex;align-items:center;gap:12px;padding:12px 12px;border-bottom:1px solid var(--line);background:${idx<3?'linear-gradient(90deg,rgba(124,58,237,0.06),transparent)':'transparent'};transition:background 0.15s;"
@@ -2600,6 +2604,7 @@ function renderAdminSettings(){
     ['line','➖ Border / Line'],['gold','⭐ Primary Accent'],['mint','✅ Secondary (Mint)'],
     ['coral','🔴 Alert / Danger'],['ice','🔵 Info / Link'],
     ['rank1','🥇 ອັນດັບ 1 (badge+ຊື່+ໂບນັດ)'],['rank2','🥈 ອັນດັບ 2 (badge+ຊື່+ໂບນັດ)'],['rank3','🥉 ອັນດັບ 3 (badge+ຊື່+ໂບນັດ)'],
+    ['rankOtherBg','🔢 ພື້ນຫຼັງ Badge ອັນດັບ 4+'],['rankOtherBorder','➖ ຂອບ Badge ອັນດັບ 4+'],
     ['tierCHi','💎 Tier Badge C (ສີເພັດ)'],['tierSHi','💎 Tier Badge S (ສີເພັດ)'],
     ['textHi','📝 ຕົວໜັງສືຫຼັກ'],['textMid','📝 ຕົວໜັງສືຮອງ'],['textLow','📝 ຕົວໜັງສືເບົາ'],
     ['btnText','🖊️ ສີຕົວໜັງສືປຸ່ມ'],
@@ -2735,7 +2740,7 @@ function previewLogoUrl(url) {
 function previewHeroBg(url){ document.documentElement.style.setProperty('--hero-bg-image', url ? `url('${url}')` : 'none'); }
 function clearHeroBg(){ document.getElementById('heroBgImage').value = ''; previewHeroBg(''); toast('ລຶບຮູບພື້ນຫຼັງແລ້ວ (ຍັງບໍ່ໄດ້ບັນທຶກ)','info'); }
 function liveColorPreview(key, val) {
-  const cssMap = { ink:'--ink', ink2:'--ink-2', ink3:'--ink-3', line:'--line', gold:'--gold', mint:'--mint', coral:'--coral', ice:'--ice', rank1:'--rank1', rank2:'--rank2', rank3:'--rank3', tierCHi:'--tier-c-hi', tierSHi:'--tier-s-hi', textHi:'--text-hi', textMid:'--text-mid', textLow:'--text-low', heroBg1:'--hero-bg1', heroBg2:'--hero-bg2', heroGlow:'--hero-glow' };
+  const cssMap = { ink:'--ink', ink2:'--ink-2', ink3:'--ink-3', line:'--line', gold:'--gold', mint:'--mint', coral:'--coral', ice:'--ice', rank1:'--rank1', rank2:'--rank2', rank3:'--rank3', tierCHi:'--tier-c-hi', tierSHi:'--tier-s-hi', textHi:'--text-hi', textMid:'--text-mid', textLow:'--text-low', heroBg1:'--hero-bg1', heroBg2:'--hero-bg2', heroGlow:'--hero-glow', rankOtherBg:'--rank-other-bg', rankOtherBorder:'--rank-other-border' };
   if(cssMap[key]) document.documentElement.style.setProperty(cssMap[key], val);
 }
 function previewFont(type, val){

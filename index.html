@@ -618,6 +618,7 @@ const State = {
   activeMonth: null,
   myBigoId: localStorage.getItem('emo_my_bigoid') || '',
   vjSession: null,
+  signupPhotos: {},
   recentLogins: [],
   _lastLoginCheck: new Date(Date.now() - 60000).toISOString(),
   lookupHistory: null,
@@ -1329,6 +1330,7 @@ async function bootApp(){
       gasCall('getThemeSettings').then(t => { if(t) applyTheme(t); }).catch(()=>{}),
       gasCall('getBannersData').then(b => { if(b){ State.banners = b; startBannerAutoplay(); try{ localStorage.setItem('emo_cache_banners', JSON.stringify(b)); }catch(e){} } }).catch(()=>{}),
       gasCall('getVjPhotos').then(m => { if(m) State.vjPhotos = m; }).catch(()=>{}),
+      gasCall('getSignupPhotos').then(m => { if(m) State.signupPhotos = m; }).catch(()=>{}),
       gasCall('getVjLiveData', null).then(res => {
         if (res && !res.error) {
           _vjLiveCache = res.list; State.liveMonths = res.months; State.activeLiveMonth = res.month;
@@ -2918,7 +2920,11 @@ function findPhotoUrlByBigoId(bigoId) {
   if (!bigoId) return '';
   const key = String(bigoId).trim().toLowerCase();
   if (State.vjPhotos && State.vjPhotos[key]) return State.vjPhotos[key];
-  // fallback: ຮູບເກົ່າທີ່ເຄີຍໃສ່ໄວ້ໃນລາຍເດືອນ (ຖ້າມີ)
+  if (_vjLiveCache) {
+    const found = _vjLiveCache.find(v => String(v.bigoId).trim().toLowerCase() === key);
+    if (found && found.photoUrl) return found.photoUrl;
+  }
+  if (State.signupPhotos && State.signupPhotos[key]) return State.signupPhotos[key];
   for (const m of State.months) {
     const list = (State.monthsData[m] && State.monthsData[m].vjList) || [];
     for (const v of list) { if (String(v.bigoId).trim().toLowerCase() === key && v.photoUrl) return v.photoUrl; }
@@ -3052,7 +3058,7 @@ function renderNewVjActiveListInner(){
   return sorted.map(vj => `
     <div class="card" style="margin-bottom:10px; padding:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <div class="vj-avatar">${initials(vj.bigoId)}</div>
+        <div class="vj-avatar" style="overflow:hidden;">${(() => { const purl = findPhotoUrlByBigoId(vj.bigoId); return purl ? `<img src="${escapeHtml(purl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(vj.bigoId)}</span>` : initials(vj.bigoId); })()}</div>
         <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">${escapeHtml(vj.vjName||vj.bigoId)}</div><div style="font-size:11.5px;color:var(--text-low);">${escapeHtml(vj.bigoId)} ·📆 ເດືອນທີ ${vj.supportMonthIndex} ຂອງການສະໜັບສະໜູນ</div></div>
         <span style="background:${vj.met?'rgba(45,212,168,0.15)':'rgba(255,107,94,0.12)'};color:${vj.met?'var(--mint)':'var(--coral)'};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${vj.met?'✅ ຜ່ານ':'⚠️ ຍັງບໍ່ຜ່ານ'}</span>
       </div>

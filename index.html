@@ -3377,6 +3377,7 @@ function openPkMatchModal(dateKey, bigoId){
       <div class="field"><label>ຜົນ ຄູ່ຕໍ່ສູ້</label><select id="pkResultB">
         <option value="WIN" ${cur.resultB==='WIN'?'selected':''}>WIN</option>
         <option value="LOSE" ${cur.resultB==='LOSE'?'selected':''}>LOSE</option></select></div>
+        <option value="" ${!cur.resultB?'selected':''}>ບໍ່ຮູ້ຜົນ</option></select></div>
     </div>
     <div class="field-row">
       <div class="field"><label>ຄະແນນ ຝ່າຍເຮົາ</label><input id="pkScoreA" type="number" value="${cur.scoreA||0}"></div>

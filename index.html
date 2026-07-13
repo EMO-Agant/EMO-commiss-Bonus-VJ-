@@ -1545,14 +1545,14 @@ function renderEmoAssistant(){
   const hist = State.emoChatHistory;
   return `
     <div class="page-head fade-in" style="display:flex; align-items:center; gap:14px;">
-      ${emoMascotHtml('found', 70)}
+      ${State.theme.emoHeaderIcon ? `<img src="${escapeHtml(State.theme.emoHeaderIcon)}" style="width:70px;height:70px;object-fit:contain;border-radius:12px;flex-shrink:0;">` : emoMascotHtml('found', 80)}
       <div>
         <p class="eyebrow" style="margin-bottom:2px;">ຜູ້ຊ່ວຍ AI</p><h1 style="margin:0;">ນ້ອງ EMO</h1>
         <p style="margin:4px 0 0;">ຖາມນ້ອງ EMO ໄດ້ທຸກເລື່ອງ: ໂບນັດ, ຈັດຫ້ອງໄລ້, ແຕ່ງໂຕ, ລົມກັບຜູ້ຊົມ ແລະ ອື່ນໆ</p>
       </div>
     </div>
     <div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
-      ${emoMascotHtml('found', 64)}
+      ${State.theme.emoWelcomeIcon ? `<img src="${escapeHtml(State.theme.emoWelcomeIcon)}" style="width:64px;height:64px;object-fit:contain;border-radius:12px;flex-shrink:0;">` : emoMascotHtml('found', 64)}
       <div><div style="font-weight:700; font-size:15px;">ສະບາຍດີ! ຂ້ອຍແມ່ນນ້ອງ EMO 👋</div>
       <div class="text-low" style="font-size:12.5px;">ຜູ້ຊ່ວຍ AI ຂອງ EMO Agency ພ້ອມຊ່ວຍທ່ານທຸກເລື່ອງການໄລ້</div></div>
     </div>
@@ -1611,7 +1611,14 @@ async function sendEmoQuickQuestion(q){
 async function saveEmoIcons(){
   const foundUrl = document.getElementById('emoIconFoundInput').value.trim();
   const notFoundUrl = document.getElementById('emoIconNotFoundInput').value.trim();
-  const newT = Object.assign({}, State.theme, { emoIconFound: foundUrl, emoIconNotFound: notFoundUrl });
+  const headerUrl = document.getElementById('emoHeaderIconInput').value.trim();
+  const welcomeUrl = document.getElementById('emoWelcomeIconInput').value.trim();
+  const newT = Object.assign({}, State.theme, {
+    emoIconFound: foundUrl,
+    emoIconNotFound: notFoundUrl,
+    emoHeaderIcon: headerUrl,
+    emoWelcomeIcon: welcomeUrl
+  });
   applyTheme(newT);
   try{
     await gasCall('saveThemeSettings', State.adminPassword, newT);
@@ -2479,6 +2486,18 @@ function renderAdminEmoKb(){
           <label>👩 ຮູບເມື່ອບໍ່ພົບຂໍ້ມູນ</label>
           <input id="emoIconNotFoundInput" type="text" value="${escapeHtml(State.theme.emoIconNotFound||'')}" placeholder="https://...">
           <img src="${escapeHtml(getEmoIconUrl('notfound'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>🟦 ຮູບຫົວຂໍ້ໜ້າ (ກ່ອງເທິງ)</label>
+          <input id="emoHeaderIconInput" type="text" value="${escapeHtml(State.theme.emoHeaderIcon||'')}" placeholder="https://...">
+          <img src="${escapeHtml(State.theme.emoHeaderIcon || getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
+        </div>
+        <div class="field">
+          <label>🟪 ຮູບຂໍ້ຄວາມທັກທາຍ (ກ່ອງລຸ່ມ)</label>
+          <input id="emoWelcomeIconInput" type="text" value="${escapeHtml(State.theme.emoWelcomeIcon||'')}" placeholder="https://...">
+          <img src="${escapeHtml(State.theme.emoWelcomeIcon || getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
         </div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="saveEmoIcons()">${ICONS.check} ບັນທຶກຮູບໄອຄອນ</button>

@@ -771,6 +771,7 @@ async function gasCall(fnName, ...args){
     'adminSaveVjPhoto','adminDeleteVjPhoto',
     'adminSavePkCoverPhoto','adminSavePkMatchPhoto','adminDeletePkMatchPhoto',
     'adminLoginV2','adminSaveAdminAccount','adminDeleteAdminAccount',
+    'adminSavePkFamilyTeams','adminSavePkFamilyRound','adminSetPkFamilyWinner','adminResetPkFamily',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -814,6 +815,7 @@ const USER_NAV = [
   { id:'newvjactive', label:'New VJ Active', icon:'🌟'},
   { id:'cashbonus', label:'ໂບນັດເງິນສົດ', icon:'💰'},
   { id:'pk', label:'PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
+  { id:'pkfamily', label:'PK Family', icon:'🏅'},
   { id:'leaderboard', label:'ອັນດັບ VJ', icon:'🏆'},
   { id:'emo', label:'ນ້ອງ EMO', icon:'<img src="https://i.postimg.cc/3R0PMmV8/ນ-ອງ-EMO-i-CON.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
@@ -825,6 +827,7 @@ const ADMIN_NAV_ALL = [
   { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅', roles:['CEO'] },
   { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖', roles:['CEO','Manager','Admin'] },
   { id:'admin-pk', label:'ຈັດການ PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', roles:['CEO','Manager','Admin'] },
+  { id:'admin-pkfamily', label:'ຈັດການ PK Family', icon:'🏅', roles:['CEO','Manager','Admin'] },
   { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅', roles:['CEO','Manager','Admin'] },
   { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱', roles:['CEO','Manager','Admin'] },
   { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠', roles:['CEO','Manager','Admin'] },
@@ -1206,6 +1209,8 @@ function render(){
     case 'newvjactive': main.innerHTML = renderNewVjActive(); break;
     case 'pk': main.innerHTML = renderPk(); break;
     case 'admin-pk': main.innerHTML = State.isAdmin ? renderAdminPk() : renderAdminLogin(); break;
+    case 'pkfamily': main.innerHTML = renderPkFamily(); break;
+    case 'admin-pkfamily': main.innerHTML = State.isAdmin ? renderAdminPkFamily() : renderAdminLogin(); break;
     case 'emo': main.innerHTML = renderEmoAssistant(); break;
     case 'cashbonus': main.innerHTML = renderCashBonus(); break;
     case 'admin-login': main.innerHTML = renderAdminLogin(); break;
@@ -3479,6 +3484,264 @@ async function runConnectionCheck() {
   } catch(e) {
     resultDiv.innerHTML = `<div style="color:var(--coral);">❌ Call failed: ${escapeHtml(e.message||String(e))}</div>`;
   }
+}
+
+/* ============================================================================
+   PK FAMILY — Bracket Elimination 3v3
+============================================================================ */
+let _pkFamilyCache = null;
+let _pkFamilySelectedVjs = []; // VJ ຖືກເລືອກມາຈັດທີມ (ຝັ່ງແອັດມິນ)
+let _pkFamilySpinResult = null;
+
+async function fetchPkFamilyData(){
+  try{ _pkFamilyCache = await gasCall('getPkFamilyData'); }
+  catch(e){ _pkFamilyCache = { teams:[], rounds:[] }; }
+  if(State.view==='pkfamily' || State.view==='admin-pkfamily'){
+    document.getElementById('main').innerHTML = (State.view==='pkfamily'?renderPkFamily():renderAdminPkFamily());
+    afterRenderHook();
+  }
+}
+
+function roundLabel(idx, totalRounds){
+  const left = totalRounds - idx;
+  if(left === 1) return '🏆 ຮອບຊິງຊະນະເລີດ';
+  if(left === 2) return '🥈 ຮອບຮອງຊະນະເລີດ';
+  return `ຮອບທີ ${idx+1}`;
+}
+
+function pkFamilyTeamCardHtml(team, small){
+  if(!team) return `<div style="flex:1; text-align:center; color:var(--text-low); font-size:12px;">ລໍຖ້າຄູ່ແຂ່ງ...</div>`;
+  const members = team.members || [];
+  return `
+    <div style="text-align:center; flex:1;">
+      <div style="display:flex; justify-content:center; gap:-8px; margin-bottom:6px;">
+        ${members.map((m,i)=>`<img src="${escapeHtml(m.photoUrl||'')}" style="width:${small?38:52}px;height:${small?38:52}px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);margin-left:${i>0?'-12px':'0'};background:var(--ink-3);" onerror="this.src='https://via.placeholder.com/60?text=${encodeURIComponent(initials(m.bigoId))}'">`).join('')}
+      </div>
+      <div style="font-weight:800; font-size:${small?12:14}px; color:var(--gold);">${escapeHtml(team.name)}</div>
+      <div style="font-size:10.5px; color:var(--text-low); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${members.map(m=>escapeHtml(m.vjName||m.bigoId)).join(' - ')}</div>
+    </div>`;
+}
+
+function renderPkFamily(){
+  if(!_pkFamilyCache){ fetchPkFamilyData(); return skeletonHtml(); }
+  const data = _pkFamilyCache;
+  const rounds = data.rounds || [];
+  const teamsById = {}; (data.teams||[]).forEach(t=>teamsById[t.id]=t);
+
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">ກິດຈະກຳ</p>
+      <h1>🏅 PK Family 3v3</h1>
+      <p>ຕາຕະລາງແຂ່ງຂັນແບບຂັດອອກ — ${(data.teams||[]).length} ທີມ</p>
+    </div>
+    ${!rounds.length ? emptyStateHtml('inbox','ຍັງບໍ່ມີການແຂ່ງຂັນ','Admin ຍັງບໍ່ໄດ້ຈັດຕັ້ງທີມ ຫຼື ຈັບຄູ່ PK Family') :
+      rounds.map((matches, ridx) => `
+        <div class="section-label">${roundLabel(ridx, rounds.length)}</div>
+        ${matches.map(m=>{
+          const teamA = teamsById[m.teamAId], teamB = teamsById[m.teamBId];
+          const winner = m.winnerId ? teamsById[m.winnerId] : null;
+          return `
+          <div class="card" style="margin-bottom:10px; padding:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <span class="mono" style="font-size:12px; color:var(--text-low);">🕐 ${escapeHtml(m.time||'-')}</span>
+              ${winner ? `<span style="background:rgba(45,212,168,0.15);color:var(--mint);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">✅ ຊະນະ: ${escapeHtml(winner.name)}</span>` : `<span style="background:rgba(255,184,46,0.12);color:var(--gold);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">⏳ ລໍຜົນ</span>`}
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              ${pkFamilyTeamCardHtml(teamA)}
+              <div style="font-family:var(--f-display); font-weight:800; font-size:16px; color:var(--coral); flex-shrink:0;">VS</div>
+              ${pkFamilyTeamCardHtml(teamB)}
+            </div>
+          </div>`;
+        }).join('')}
+      `).join('')}
+  `;
+}
+
+/* ---------- ADMIN: ຈັດການ PK Family ---------- */
+function renderAdminPkFamily(){
+  if(!_pkFamilyCache){ fetchPkFamilyData(); return skeletonHtml(); }
+  const data = _pkFamilyCache;
+  const teams = data.teams || [];
+  const vjPool = (_vjLiveCache || []).map(v => ({ bigoId: v.bigoId, vjName: v.vjName, photoUrl: findPhotoUrlByBigoId(v.bigoId) }));
+
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">Admin</p>
+      <h1>🏅 ຈັດການ PK Family</h1>
+      <p>ຈັດຕັ້ງທີມ, ໝູນສຸ່ມຈັບຄູ່, ແລະ ບັນທຶກຜົນຊະນະແຕ່ລະຮອບ</p>
+    </div>
+
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:10px;">
+        <b>1️⃣ ຈັດຕັ້ງທີມ (${teams.length} ທີມ)</b>
+        <button class="btn btn-primary btn-sm" onclick="openPkFamilyTeamModal()">${ICONS.plus} ສ້າງທີມ</button>
+      </div>
+      ${teams.length ? teams.map(t=>`
+        <div class="vj-row">
+          <div class="vj-avatar">${t.name.slice(-1)}</div>
+          <div class="vj-info">
+            <div class="name">${escapeHtml(t.name)}</div>
+            <div class="meta">${(t.members||[]).map(m=>escapeHtml(m.vjName||m.bigoId)).join(', ')}</div>
+          </div>
+          <button class="icon-btn" style="color:var(--coral);" onclick="deletePkFamilyTeam('${t.id}')">${ICONS.trash}</button>
+        </div>`).join('') : `<div class="empty-state" style="padding:20px;"><p>ຍັງບໍ່ມີທີມ</p></div>`}
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <b>2️⃣ ໝູນສຸ່ມຈັບຄູ່ (Spin) — ຮອບໃໝ່</b>
+      <p class="text-low" style="font-size:12px; margin:6px 0 12px;">ເລືອກທີມທີ່ຈະເຂົ້າຮອບນີ້ (ຄວນເປັນເລກຄູ່ ເຊັ່ນ 8, 4, 2 ທີມ) ແລ້ວກົດ Spin ເພື່ອສຸ່ມຈັບຄູ່</p>
+      <div id="pkFamilySpinPool" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+        ${teams.map(t=>`<label style="display:flex; align-items:center; gap:5px; background:var(--ink-3); border:1px solid var(--line); border-radius:20px; padding:5px 12px; font-size:12.5px; cursor:pointer;">
+          <input type="checkbox" class="pkFamilySpinCheck" value="${t.id}" style="accent-color:var(--gold);"> ${escapeHtml(t.name)}
+        </label>`).join('')}
+      </div>
+      <div id="pkFamilyWheelArea" style="text-align:center; margin-bottom:12px;"></div>
+      <button class="btn btn-primary btn-block" onclick="spinPkFamilyMatchup()">🎡 ໝູນສຸ່ມຈັບຄູ່</button>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="flex-between" style="margin-bottom:10px;"><b>3️⃣ ຮອບການແຂ່ງຂັນ &amp; ບັນທຶກຜົນ</b>
+        <button class="btn btn-danger btn-sm" onclick="confirmResetPkFamily()">🗑️ ລ້າງທັງໝົດ</button>
+      </div>
+      ${(data.rounds||[]).length ? (data.rounds||[]).map((matches, ridx)=>{
+        const teamsById = {}; teams.forEach(t=>teamsById[t.id]=t);
+        return `
+        <div class="section-label">${roundLabel(ridx, data.rounds.length)}</div>
+        ${matches.map(m=>{
+          const teamA = teamsById[m.teamAId], teamB = teamsById[m.teamBId];
+          return `
+          <div class="vj-row" style="align-items:center;">
+            <div class="vj-info">
+              <div class="name">${escapeHtml(teamA?teamA.name:'-')} <span class="text-coral">VS</span> ${escapeHtml(teamB?teamB.name:'-')}</div>
+              <div class="meta">🕐 ${escapeHtml(m.time||'-')}</div>
+            </div>
+            <select onchange="setPkFamilyWinner(${ridx}, '${m.matchId}', this.value)" style="background:var(--ink); border:1px solid var(--line); border-radius:8px; padding:6px 8px; color:var(--text-hi); font-size:12px;">
+              <option value="">ຜົນ...</option>
+              <option value="${m.teamAId}" ${m.winnerId===m.teamAId?'selected':''}>${escapeHtml(teamA?teamA.name:'A')} ຊະນະ</option>
+              <option value="${m.teamBId}" ${m.winnerId===m.teamBId?'selected':''}>${escapeHtml(teamB?teamB.name:'B')} ຊະນະ</option>
+            </select>
+          </div>`;
+        }).join('')}`;
+      }).join('') : `<div class="empty-state" style="padding:20px;"><p>ຍັງບໍ່ມີຮອບການແຂ່ງຂັນ — ໃຊ້ Spin ດ້ານເທິງເພື່ອສ້າງຮອບທຳອິດ</p></div>`}
+    </div>
+  `;
+}
+
+function openPkFamilyTeamModal(){
+  const vjPool = (_vjLiveCache || []);
+  openModal(`
+    <div class="modal-head"><h3>ສ້າງທີມໃໝ່ (ເລືອກ 3 ຄົນ)</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <div class="field"><label>ຊື່ທີມ</label><input id="pkFamilyTeamName" type="text" placeholder="ຕົວຢ່າງ: Group A"></div>
+    <div class="search-bar" style="margin-bottom:10px;">
+      ${ICONS.search}<input id="pkFamilyVjSearch" type="text" placeholder="ຄົ້ນຫາ VJ..." oninput="filterPkFamilyVjPool(this.value)">
+    </div>
+    <div id="pkFamilyVjPoolList" style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+      ${vjPool.map(v=>`
+        <label style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:10px; background:var(--ink-3); cursor:pointer;">
+          <input type="checkbox" class="pkFamilyMemberCheck" value='${JSON.stringify({bigoId:v.bigoId,vjName:v.vjName,photoUrl:findPhotoUrlByBigoId(v.bigoId)}).replace(/'/g,"&#39;")}' style="accent-color:var(--gold);">
+          <img src="${escapeHtml(findPhotoUrlByBigoId(v.bigoId))}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--ink);" onerror="this.style.visibility='hidden'">
+          <span style="font-size:13px;">${escapeHtml(v.vjName||v.bigoId)} <span class="text-low mono" style="font-size:11px;">(${escapeHtml(v.bigoId)})</span></span>
+        </label>`).join('')}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitPkFamilyTeam()">${ICONS.check} ບັນທຶກທີມ</button>
+    </div>`);
+}
+function filterPkFamilyVjPool(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('#pkFamilyVjPoolList label').forEach(el=>{
+    el.style.display = el.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+  });
+}
+async function submitPkFamilyTeam(){
+  const name = document.getElementById('pkFamilyTeamName').value.trim();
+  const checks = document.querySelectorAll('.pkFamilyMemberCheck:checked');
+  if(!name){ toast('ກະລຸນາປ້ອນຊື່ທີມ','error'); return; }
+  if(checks.length !== 3){ toast('ກະລຸນາເລືອກ VJ 3 ຄົນ (ເລືອກແລ້ວ '+checks.length+')','error'); return; }
+  const members = Array.from(checks).map(c=>JSON.parse(c.value));
+  const teams = (_pkFamilyCache.teams||[]).slice();
+  teams.push({ id:'team_'+Date.now(), name, members });
+  try{
+    await gasCall('adminSavePkFamilyTeams', State.adminPassword, teams);
+    _pkFamilyCache.teams = teams;
+    toast('ສ້າງທີມສຳເລັດ','success');
+    closeModal();
+    setView('admin-pkfamily');
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+async function deletePkFamilyTeam(teamId){
+  const teams = (_pkFamilyCache.teams||[]).filter(t=>t.id!==teamId);
+  try{
+    await gasCall('adminSavePkFamilyTeams', State.adminPassword, teams);
+    _pkFamilyCache.teams = teams;
+    toast('ລຶບທີມສຳເລັດ','success');
+    setView('admin-pkfamily');
+  }catch(e){ toast(e.message||'ລຶບບໍ່ສຳເລັດ','error'); }
+}
+
+// ★ Spin ແບບງ່າຍ (ສຸ່ມ shuffle + animation ໝູນ) ຈັບຄູ່ທີມທີ່ຖືກເລືອກ
+async function spinPkFamilyMatchup(){
+  const checks = document.querySelectorAll('.pkFamilySpinCheck:checked');
+  const teamIds = Array.from(checks).map(c=>c.value);
+  if(teamIds.length < 2 || teamIds.length % 2 !== 0){
+    toast('ກະລຸນາເລືອກທີມເປັນຈຳນວນຄູ່ (2,4,8...)','error'); return;
+  }
+  const wheelArea = document.getElementById('pkFamilyWheelArea');
+  const teamsById = {}; (_pkFamilyCache.teams||[]).forEach(t=>teamsById[t.id]=t);
+
+  // animation ໝູນລໍ້ແບບງ່າຍ
+  wheelArea.innerHTML = `<div style="font-size:40px; animation:spin 1.2s linear infinite; display:inline-block;">🎡</div><div class="text-low" style="font-size:12px; margin-top:6px;">ກຳລັງສຸ່ມຈັບຄູ່...</div>
+    <style>@keyframes spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}</style>`;
+
+  await new Promise(r=>setTimeout(r, 1500));
+
+  // shuffle
+  const shuffled = teamIds.slice();
+  for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+  const matches = [];
+  for(let i=0;i<shuffled.length;i+=2){
+    matches.push({
+      matchId: 'm_'+Date.now()+'_'+i,
+      teamAId: shuffled[i], teamBId: shuffled[i+1],
+      time: '', winnerId: ''
+    });
+  }
+  const roundIndex = (_pkFamilyCache.rounds||[]).length;
+  try{
+    await gasCall('adminSavePkFamilyRound', State.adminPassword, roundIndex, matches);
+    if(!_pkFamilyCache.rounds) _pkFamilyCache.rounds = [];
+    _pkFamilyCache.rounds[roundIndex] = matches;
+    wheelArea.innerHTML = `<div style="color:var(--mint); font-weight:700;">✅ ຈັບຄູ່ສຳເລັດ! ${matches.length} ຄູ່</div>`;
+    toast('ຈັບຄູ່ Round ໃໝ່ສຳເລັດ','success');
+    setTimeout(()=>setView('admin-pkfamily'), 800);
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+async function setPkFamilyWinner(roundIndex, matchId, winnerId){
+  if(!winnerId) return;
+  try{
+    await gasCall('adminSetPkFamilyWinner', State.adminPassword, roundIndex, matchId, winnerId);
+    toast('ບັນທຶກຜົນສຳເລັດ','success');
+    fetchPkFamilyData();
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+function confirmResetPkFamily(){
+  openModal(`
+    <div class="modal-head"><h3>ລ້າງຂໍ້ມູນ PK Family?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <p class="text-low">ຈະລຶບທີມ ແລະ ຮອບການແຂ່ງຂັນທັງໝົດ ຖາວອນ.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-danger" onclick="submitResetPkFamily()">${ICONS.trash} ລ້າງເລີຍ</button>
+    </div>`);
+}
+async function submitResetPkFamily(){
+  try{
+    await gasCall('adminResetPkFamily', State.adminPassword);
+    _pkFamilyCache = { teams:[], rounds:[] };
+    toast('ລ້າງຂໍ້ມູນສຳເລັດ','success');
+    closeModal();
+    setView('admin-pkfamily');
+  }catch(e){ toast(e.message||'ລ້າງບໍ່ສຳເລັດ','error'); }
 }
 </script>
 <script>

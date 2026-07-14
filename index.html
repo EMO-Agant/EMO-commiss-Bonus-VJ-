@@ -1454,18 +1454,22 @@ function vjRowHtml(vj, idx){
   const bonus = Number(vj.bonusVjUSD)||0;
   const isTop3 = idx < 3;
 
+  const medalEmoji = ['🥇','🥈','🥉'][idx] || '';
   const diamondBadge = isTop3 ? `
-    <div style="position:relative; width:40px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-      <svg viewBox="0 0 40 46" style="position:absolute; inset:0; width:100%; height:100%;">
-        <defs>
-          <linearGradient id="rankGrad${idx}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="${rankGlow}"/>
-            <stop offset="100%" stop-color="${darkenHex(rankGlow,0.35)}"/>
-          </linearGradient>
-        </defs>
-        <polygon points="20,1 38,12 38,34 20,45 2,34 2,12" fill="url(#rankGrad${idx})" stroke="${rankGlow}" stroke-width="1.2"/>
-      </svg>
-      <span style="position:relative; font-family:var(--f-display); font-weight:800; font-size:15px; color:#1a1206; text-shadow:0 1px 0 rgba(255,255,255,0.3);">${idx+1}</span>
+    <div style="position:relative; width:40px; height:60px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;">
+      <div style="font-size:20px; margin-bottom:2px; line-height:1;">${medalEmoji}</div>
+      <div style="position:relative; width:40px; height:46px; display:flex; align-items:center; justify-content:center;">
+        <svg viewBox="0 0 40 46" style="position:absolute; inset:0; width:100%; height:100%;">
+          <defs>
+            <linearGradient id="rankGrad${idx}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${rankGlow}"/>
+              <stop offset="100%" stop-color="${darkenHex(rankGlow,0.35)}"/>
+            </linearGradient>
+          </defs>
+          <polygon points="20,1 38,12 38,34 20,45 2,34 2,12" fill="url(#rankGrad${idx})" stroke="${rankGlow}" stroke-width="1.2"/>
+        </svg>
+        <span style="position:relative; font-family:var(--f-display); font-weight:800; font-size:15px; color:#1a1206; text-shadow:0 1px 0 rgba(255,255,255,0.3);">${idx+1}</span>
+      </div>
     </div>` : `
     <div style="width:32px;height:32px;border-radius:10px;background:var(--rank-other-bg,var(--ink-3));border:1px solid var(--rank-other-border,var(--line));display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-weight:800;font-size:13px;color:var(--text-mid);flex-shrink:0;">${idx+1}</div>`;
 
@@ -1509,8 +1513,8 @@ function vjRowHtml(vj, idx){
         ${State.isAdmin ? `<div style="font-family:var(--f-mono); font-weight:800; font-size:16px;
           color:${isTop3?rankGlow:'var(--gold)'};
           ${isTop3?`text-shadow:0 0 14px ${rankGlow}88;`:''}">$${fmtMoney(vj.bonusVjUSD)}</div>` : ''}
-        ${bonus>0?`<div style="font-size:10.5px;color:var(--text-low);margin-top:1px;">ໂບນັດ</div>
-          <div style="font-family:var(--f-mono);font-size:11px;font-weight:700;color:var(--text-low);margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} ຖົ່ວ</div>`:''}
+        ${bonus>0?`<div style="font-size:10px;color:var(--text-low);margin-top:2px;">ໂບນັດ</div>
+          <div style="font-family:var(--f-mono);font-size:18px;font-weight:900;color:var(--gold);text-shadow:0 0 10px rgba(245,184,46,0.5);margin-top:1px;">+${fmtInt(vj.bonusBeansTotal)} ຖົ່ວ</div>`:''}
       </div>
     </div>`;
 }

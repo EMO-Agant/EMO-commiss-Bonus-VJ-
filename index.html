@@ -3264,7 +3264,7 @@ function renderPk(){
                   </div>
                   <b style="font-size:13.5px; color:#21170a;">${escapeHtml(r.vjName||r.bigoId)}</b>
                 </div>
-                <span class="mono" style="font-size:11px; color:#21170a; font-weight:600;">${escapeHtml(r.time)}</span>
+                <span class="mono" style="font-size:15px; color:#21170a; font-weight:800;">${escapeHtml(r.time)}</span>
               </div>
               <div id="pkbody_${mid}" style="display:block;">
               ${m ? `
@@ -3297,19 +3297,21 @@ function renderPk(){
                 const aWin = (m.resultA === 'WIN');
                 const colorA = aWin ? 'linear-gradient(90deg,#F5B82E,#D9A65C)' : 'linear-gradient(90deg,#C0392B,#FF6B5E)';
                 const colorB = !aWin ? 'linear-gradient(90deg,#D9A65C,#F5B82E)' : 'linear-gradient(90deg,#FF6B5E,#C0392B)';
-                const star = `<svg viewBox="0 0 24 24" fill="#fff" style="width:16px;height:16px;flex-shrink:0;"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6z"/></svg>`;
+                const star = `<svg viewBox="0 0 24 24" fill="#fff" style="width:14px;height:14px;flex-shrink:0;"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6z"/></svg>`;
                 const totalScore = (m.scoreA||0) + (m.scoreB||0) || 1;
-                const pctA = Math.max(8, Math.round((m.scoreA||0) / totalScore * 100));
+                // ★ ບັງຄັບຂັ້ນຕ່ຳທັງ 2 ຝ່າຍ ບໍ່ໃຫ້ນ້ອຍກວ່າ 26% (ພໍໃສ່ດາວ+ຕົວເລກ)
+                let pctA = Math.round((m.scoreA||0) / totalScore * 100);
+                pctA = Math.max(26, Math.min(74, pctA));
                 const pctB = 100 - pctA;
                 return `
-                <div style="display:flex; height:36px; border-radius:20px; overflow:hidden; margin-bottom:10px; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
-                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 12px 0 8px; background:${colorA}; min-width:0;">
-                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreA)}</span>
+                <div style="display:flex; height:40px; border-radius:20px; overflow:hidden; margin-bottom:10px; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
+                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:flex-end; gap:5px; padding:0 10px; background:${colorA}; min-width:0; overflow:hidden;">
+                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:13px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreA)}</span>
                   </div>
-                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 8px 0 12px; background:${colorB}; min-width:0;">
-                    <span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreB)}</span>${star}
+                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:flex-start; gap:5px; padding:0 10px; background:${colorB}; min-width:0; overflow:hidden;">
+                    <span style="font-family:var(--f-mono); font-weight:800; font-size:13px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreB)}</span>${star}
                   </div>
-                </div>` ;
+                </div>`;
               })() : ''}
               <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; font-size:11.5px;">
                 <div style="background:var(--ink); border-radius:8px; padding:6px; text-align:center;"><div class="text-low" style="font-size:10px;">Battle Royal</div><div>${fmtInt(r.brBeans)} → <b class="text-gold">${fmtInt(r.brBonus)}</b></div></div>

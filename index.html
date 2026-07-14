@@ -3305,10 +3305,10 @@ function renderPk(){
                 const pctB = 100 - pctA;
                 return `
                 <div style="display:flex; height:40px; border-radius:20px; overflow:hidden; margin-bottom:10px; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
-                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:flex-end; gap:5px; padding:0 10px; background:${colorA}; min-width:0; overflow:hidden;">
+                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:flex-start; gap:5px; padding:0 10px; background:${colorA}; min-width:0; overflow:hidden;">
                     ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:13px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreA)}</span>
                   </div>
-                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:flex-start; gap:5px; padding:0 10px; background:${colorB}; min-width:0; overflow:hidden;">
+                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:flex-end; gap:5px; padding:0 10px; background:${colorB}; min-width:0; overflow:hidden;">
                     <span style="font-family:var(--f-mono); font-weight:800; font-size:13px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreB)}</span>${star}
                   </div>
                 </div>`;

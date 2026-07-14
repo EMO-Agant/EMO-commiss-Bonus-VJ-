@@ -683,6 +683,7 @@ function applyTheme(t) {
   if(t.heroBg1)  r.setProperty('--hero-bg1',  t.heroBg1);
   if(t.heroBg2)  r.setProperty('--hero-bg2',  t.heroBg2);
   if(t.heroGlow) r.setProperty('--hero-glow', t.heroGlow);
+  if(t.pkHeaderBg) r.setProperty('--pk-header-bg', t.pkHeaderBg);
   if(t.loginBg1) r.setProperty('--login-bg1', t.loginBg1);
   if(t.loginBg2) r.setProperty('--login-bg2', t.loginBg2);
   if(t.loginGlow) r.setProperty('--login-glow', t.loginGlow);
@@ -2673,6 +2674,7 @@ function renderAdminSettings(){
     ['heroBg1','🟨 Box ໂບນັດ - ພື້ນຫຼັງ 1'],['heroBg2','🟨 Box ໂບນັດ - ພື້ນຫຼັງ 2'],['heroGlow','✨ Box ໂບນັດ - ສີແສງເຫຼືອງ'],
     ['loginBg1','🔐 ໜ້າ Login - ພື້ນຫຼັງ 1'],['loginBg2','🔐 ໜ້າ Login - ພື້ນຫຼັງ 2'],['loginGlow','✨ ໜ້າ Login - ສີແສງ'],
     ['loginAccent','🎯 ໜ້າ Login - ສີປຸ່ມ/ໂລໂກ້'],['loginAccentText','🖊️ ໜ້າ Login - ສີຕົວໜັງສືປຸ່ມ'],
+    ['pkHeaderBg','🎀 ແຖບສີ ຫົວກ່ອງ PK (ຮູບ VJ+ເວລາ)'],
   ];
   return `
     <div class="page-head fade-in">
@@ -3255,14 +3257,14 @@ function renderPk(){
             const _rowPurl = findPhotoUrlByBigoId(r.bigoId);
             return `
             <div class="card" style="padding:12px; margin-bottom:10px;">
-              <div class="flex-between" style="margin-bottom:6px; cursor:pointer;" onclick="togglePkRow('${mid}')">
+              <div class="flex-between" style="margin:-12px -12px 10px; padding:10px 12px; cursor:pointer; background:var(--pk-header-bg, linear-gradient(90deg,#F5B82E,#D9A65C)); border-radius:16px 16px 0 0;" onclick="togglePkRow('${mid}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                  <div style="width:55px;height:55px;border-radius:50%;flex-shrink:0;overflow:hidden;background:var(--ink-3);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--text-mid);">
+                  <div style="width:55px;height:55px;border-radius:50%;flex-shrink:0;overflow:hidden;background:var(--ink-3);border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--text-mid);">
                     ${_rowPurl ? `<img src="${escapeHtml(_rowPurl)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;">${initials(r.bigoId)}</span>` : initials(r.bigoId)}
                   </div>
-                  <b style="font-size:13.5px;">${escapeHtml(r.vjName||r.bigoId)}</b>
+                  <b style="font-size:13.5px; color:#21170a;">${escapeHtml(r.vjName||r.bigoId)}</b>
                 </div>
-                <span class="text-low mono" style="font-size:11px;">${escapeHtml(r.time)}</span>
+                <span class="mono" style="font-size:11px; color:#21170a; font-weight:600;">${escapeHtml(r.time)}</span>
               </div>
               <div id="pkbody_${mid}" style="display:block;">
               ${m ? `
@@ -3301,13 +3303,13 @@ function renderPk(){
                 const pctB = 100 - pctA;
                 return `
                 <div style="display:flex; height:36px; border-radius:20px; overflow:hidden; margin-bottom:10px; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
-                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 10px; background:${colorA};">
+                  <div style="flex:0 0 ${pctA}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 12px 0 8px; background:${colorA}; min-width:0;">
                     ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreA)}</span>
                   </div>
-                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 10px; background:${colorB}; flex-direction:row-reverse;">
-                    ${star}<span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreB)}</span>
+                  <div style="flex:0 0 ${pctB}%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 8px 0 12px; background:${colorB}; min-width:0;">
+                    <span style="font-family:var(--f-mono); font-weight:800; font-size:14px; color:#2a1a05; white-space:nowrap;">${fmtInt(m.scoreB)}</span>${star}
                   </div>
-                </div>` ;
+                </div>
               })() : ''}
               ` : ''}
               <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; font-size:11.5px;">

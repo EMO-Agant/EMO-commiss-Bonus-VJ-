@@ -3751,7 +3751,11 @@ function renderTeamEntryList(){
     </div>`).join('') : `<div class="empty-state" style="padding:14px;"><p>ຍັງບໍ່ມີທີມ — ກົດ "ສຸ່ມແບ່ງກຸ່ມໃໝ່"</p></div>`;
 }
 function refreshTeamWheel(){
-  const items = _pkFamilyTeamsDraft.length ? _pkFamilyTeamsDraft.map(t=>t.name) : ['ວ່າງ'];
+  let items = [];
+  _pkFamilyTeamsDraft.forEach(t => {
+    (t.members||[]).forEach(m => items.push(m.vjName || m.bigoId));
+  });
+  if(!items.length) items = ['ວ່າງ'];
   createSpinWheel('teamWheelCanvas', items, ()=>{});
 }
 function renameTeamDraftEntry(i, newName){
@@ -3763,9 +3767,16 @@ function removeTeamDraftEntry(i){
   _pkFamilyTeamsDraft.splice(i,1);
   renderTeamEntryList(); refreshTeamWheel();
 }
-function reshuffleTeamsFromPool(){
+async function reshuffleTeamsFromPool(){
   const pool = ((_pkFamilyCache && _pkFamilyCache.pool) || []).slice();
   if(pool.length < 3){ toast('ຕ້ອງມີ VJ ໃນ pool ຢ່າງໜ້ອຍ 3 ຄົນ (ໄປແທບ 0️⃣ ກ່ອນ)','error'); return; }
+
+  // ★ ໝູນວົງລໍ້ດ້ວຍລາຍຊື່ VJ ທັງໝົດກ່ອນ
+  const poolNames = pool.map(v => v.vjName || v.bigoId);
+  const wheel = createSpinWheel('teamWheelCanvas', poolNames, ()=>{});
+  wheel.spin();
+  await new Promise(r=>setTimeout(r, 4300)); // ລໍໃຫ້ animation ຈົບ (ຄືກັນກັບ spinPkFamilyMatchup)
+
   const shuffled = pool.slice().sort(()=>Math.random()-0.5);
   const groupCount = Math.ceil(shuffled.length/3);
   _pkFamilyTeamsDraft = [];

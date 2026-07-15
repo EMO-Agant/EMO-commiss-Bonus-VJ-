@@ -815,19 +815,19 @@ const USER_NAV = [
   { id:'newvjactive', label:'New VJ Active', icon:'🌟'},
   { id:'cashbonus', label:'ໂບນັດເງິນສົດ', icon:'💰'},
   { id:'pk', label:'PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
-  { id:'pkfamily', label:'PK Family', icon:'🏅'},
+  { id:'pkfamily', label:'PK Family', icon:'<img src="https://i.postimg.cc/V67nf2bN/icon-Tofy.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'leaderboard', label:'ອັນດັບ VJ', icon:'🏆'},
   { id:'emo', label:'ນ້ອງ EMO', icon:'<img src="https://i.postimg.cc/3R0PMmV8/ນ-ອງ-EMO-i-CON.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'lookup', label:'ຄົ້ນຫາ', icon:'🔍'},
 ];
-const TABBAR_NAV = USER_NAV.filter(n => n.id !== 'lookup' && n.id !== 'emo');
+const TABBAR_NAV = USER_NAV.filter(n => n.id !== 'lookup' && n.id !== 'emo' && n.id !== 'leaderboard');
 
 const ADMIN_NAV_ALL = [
   { id:'admin-dashboard', label:'ພາບລວມ', icon:'📊', roles:['CEO'] },
   { id:'admin-months', label:'ຈັດການເດືອນ', icon:'📅', roles:['CEO'] },
   { id:'admin-vj', label:'ຈັດການ VJ', icon:'🧖', roles:['CEO','Manager','Admin'] },
   { id:'admin-pk', label:'ຈັດການ PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', roles:['CEO','Manager','Admin'] },
-  { id:'admin-pkfamily', label:'ຈັດການ PK Family', icon:'🏅', roles:['CEO','Manager','Admin'] },
+  { id:'admin-pkfamily', label:'ຈັດການ PK Family', icon:'<img src="https://i.postimg.cc/V67nf2bN/icon-Tofy.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', roles:['CEO','Manager','Admin'] },
   { id:'admin-banners', label:'ຈັດການແບນເນີ້', icon:'🌅', roles:['CEO','Manager','Admin'] },
   { id:'admin-vjphone', label:'ຈັດການເບີໂທ VJ', icon:'📱', roles:['CEO','Manager','Admin'] },
   { id:'admin-emo-kb', label:'ຄວາມຮູ້ ນ້ອງ EMO', icon:'🧠', roles:['CEO','Manager','Admin'] },
@@ -3583,19 +3583,22 @@ function roundLabel(idx, totalRounds){
   return `ຮອບທີ ${idx+1}`;
 }
 
+function stripAgencyPrefix(name){
+  return String(name||'').replace(/^E\s*M\s*O\s*/i, '').trim();
+}
 function pkFamilyTeamCardHtml(team, resultBadge){
   if(!team) return `<div style="flex:1; min-width:0; text-align:center; color:var(--text-low); font-size:12px; padding-top:20px;">ລໍຖ້າຄູ່ແຂ່ງ...</div>`;
   const members = team.members || [];
   return `
     <div style="text-align:center; flex:1; min-width:0; overflow:hidden;">
       <div style="position:relative; display:flex; justify-content:center; padding-top:6px;">
-        <div style="display:flex; justify-content:center;">
-          ${members.map((m,i)=>`<img src="${escapeHtml(m.photoUrl||'')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);margin-left:${i>0?'-13px':'0'};background:var(--ink-3);flex-shrink:0;" onerror="this.src='https://via.placeholder.com/60?text=${encodeURIComponent(initials(m.bigoId))}'">`).join('')}
+        <div style="display:flex; justify-content:center; gap:6px;">
+          ${members.map((m,i)=>`<img src="${escapeHtml(findPhotoUrlByBigoId(m.bigoId) || m.photoUrl || '')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);background:var(--ink-3);flex-shrink:0;" onerror="this.src='https://via.placeholder.com/60?text=${encodeURIComponent(initials(m.bigoId))}'">`).join('')}
         </div>
         ${resultBadge ? `<img src="${resultBadge==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); width:28px; z-index:2;">` : ''}
       </div>
       <div style="font-weight:800; font-size:12.5px; color:var(--gold); margin-top:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(team.name)}</div>
-      <div style="font-size:9.5px; color:var(--text-low); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 2px;">${members.map(m=>escapeHtml(m.vjName||m.bigoId)).join(' - ')}</div>
+      <div style="font-size:9.5px; color:var(--text-low); line-height:1.4; padding:0 2px;">${members.map(m=>escapeHtml(stripAgencyPrefix(m.vjName||m.bigoId))).join(', ')}</div>
     </div>`;
 }
 
@@ -3653,7 +3656,7 @@ function renderAdminPkFamily(){
   return `
     <div class="page-head fade-in">
       <p class="eyebrow">Admin</p>
-      <h1>🏅 ຈັດການ PK Family</h1>
+      <h1><img src="https://i.postimg.cc/V67nf2bN/icon-Tofy.png" style="width:32px;height:32px;object-fit:contain;vertical-align:-6px;margin-right:6px;">ຈັດການ PK Family</h1>
       <p>ຈັດຕັ້ງທີມ, ໝູນສຸ່ມຈັບຄູ່, ແລະ ບັນທຶກຜົນຊະນະແຕ່ລະຮອບ</p>
     </div>
     

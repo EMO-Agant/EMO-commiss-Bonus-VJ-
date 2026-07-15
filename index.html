@@ -3987,42 +3987,6 @@ async function deletePkFamilyTeam(teamId){
   }catch(e){ toast(e.message||'ລຶບບໍ່ສຳເລັດ','error'); }
 }
 
-// ★ Spin ແບບງ່າຍ (ສຸ່ມ shuffle + animation ໝູນ) ຈັບຄູ່ທີມທີ່ຖືກເລືອກ
-async function spinPkFamilyMatchup(){
-  const checks = document.querySelectorAll('.pkFamilySpinCheck:checked');
-  const teamIds = Array.from(checks).map(c=>c.value);
-  if(teamIds.length < 2 || teamIds.length % 2 !== 0){
-    toast('ກະລຸນາເລືອກທີມເປັນຈຳນວນຄູ່ (2,4,8...)','error'); return;
-  }
-  const wheelArea = document.getElementById('pkFamilyWheelArea');
-  const teamsById = {}; (_pkFamilyCache.teams||[]).forEach(t=>teamsById[t.id]=t);
-
-  wheelArea.innerHTML = `<canvas id="matchupWheel" width="240" height="240" style="margin:0 auto;display:block;"></canvas>`;
-  const wheel = createSpinWheel('matchupWheel', teamIds.map(id=>teamsById[id].name), ()=>{});
-  wheel.spin();
-  await new Promise(r=>setTimeout(r, 4300)); // ລໍໃຫ້ animation ຈົບ
-
-  // shuffle
-  const shuffled = teamIds.slice();
-  for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
-  const matches = [];
-  for(let i=0;i<shuffled.length;i+=2){
-    matches.push({
-      matchId: 'm_'+Date.now()+'_'+i,
-      teamAId: shuffled[i], teamBId: shuffled[i+1],
-      time: '', winnerId: ''
-    });
-  }
-  const roundIndex = (_pkFamilyCache.rounds||[]).length;
-  try{
-    await gasCall('adminSavePkFamilyRound', State.adminPassword, roundIndex, matches);
-    if(!_pkFamilyCache.rounds) _pkFamilyCache.rounds = [];
-    _pkFamilyCache.rounds[roundIndex] = matches;
-    wheelArea.innerHTML = `<div style="color:var(--mint); font-weight:700;">✅ ຈັບຄູ່ສຳເລັດ! ${matches.length} ຄູ່</div>`;
-    toast('ຈັບຄູ່ Round ໃໝ່ສຳເລັດ','success');
-    setTimeout(()=>setView('admin-pkfamily'), 800);
-  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
-}
 async function setPkFamilyWinner(roundIndex, matchId, winnerId){
   if(!winnerId) return;
   try{

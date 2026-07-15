@@ -771,7 +771,7 @@ async function gasCall(fnName, ...args){
     'adminSaveVjPhoto','adminDeleteVjPhoto',
     'adminSavePkCoverPhoto','adminSavePkMatchPhoto','adminDeletePkMatchPhoto',
     'adminLoginV2','adminSaveAdminAccount','adminDeleteAdminAccount',
-    'adminSavePkFamilyTeams','adminSavePkFamilyRound','adminSetPkFamilyWinner','adminResetPkFamily','adminSavePkFamilyPool','adminSetPkFamilyMatchTime',
+    'adminSavePkFamilyTeams','adminSavePkFamilyRound','adminSetPkFamilyWinner','adminResetPkFamily','adminSavePkFamilyPool','adminSetPkFamilyMatchTime','adminSetPkFamilyScore',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -3583,16 +3583,19 @@ function roundLabel(idx, totalRounds){
   return `ຮອບທີ ${idx+1}`;
 }
 
-function pkFamilyTeamCardHtml(team, small){
-  if(!team) return `<div style="flex:1; text-align:center; color:var(--text-low); font-size:12px;">ລໍຖ້າຄູ່ແຂ່ງ...</div>`;
+function pkFamilyTeamCardHtml(team, resultBadge){
+  if(!team) return `<div style="flex:1; min-width:0; text-align:center; color:var(--text-low); font-size:12px; padding-top:20px;">ລໍຖ້າຄູ່ແຂ່ງ...</div>`;
   const members = team.members || [];
   return `
-    <div style="text-align:center; flex:1;">
-      <div style="display:flex; justify-content:center; gap:-8px; margin-bottom:6px;">
-        ${members.map((m,i)=>`<img src="${escapeHtml(m.photoUrl||'')}" style="width:${small?38:52}px;height:${small?38:52}px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);margin-left:${i>0?'-12px':'0'};background:var(--ink-3);" onerror="this.src='https://via.placeholder.com/60?text=${encodeURIComponent(initials(m.bigoId))}'">`).join('')}
+    <div style="text-align:center; flex:1; min-width:0; overflow:hidden;">
+      <div style="position:relative; display:flex; justify-content:center; padding-top:6px;">
+        <div style="display:flex; justify-content:center;">
+          ${members.map((m,i)=>`<img src="${escapeHtml(m.photoUrl||'')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);margin-left:${i>0?'-13px':'0'};background:var(--ink-3);flex-shrink:0;" onerror="this.src='https://via.placeholder.com/60?text=${encodeURIComponent(initials(m.bigoId))}'">`).join('')}
+        </div>
+        ${resultBadge ? `<img src="${resultBadge==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); width:28px; z-index:2;">` : ''}
       </div>
-      <div style="font-weight:800; font-size:${small?12:14}px; color:var(--gold);">${escapeHtml(team.name)}</div>
-      <div style="font-size:10.5px; color:var(--text-low); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${members.map(m=>escapeHtml(m.vjName||m.bigoId)).join(' - ')}</div>
+      <div style="font-weight:800; font-size:12.5px; color:var(--gold); margin-top:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(team.name)}</div>
+      <div style="font-size:9.5px; color:var(--text-low); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 2px;">${members.map(m=>escapeHtml(m.vjName||m.bigoId)).join(' - ')}</div>
     </div>`;
 }
 
@@ -3614,20 +3617,28 @@ function renderPkFamily(){
         ${matches.map(m=>{
           const teamA = teamsById[m.teamAId], teamB = teamsById[m.teamBId];
           const winner = m.winnerId ? teamsById[m.winnerId] : null;
+          const resultA = m.winnerId ? (m.winnerId===m.teamAId ? 'WIN' : 'LOSE') : null;
+          const resultB = m.winnerId ? (m.winnerId===m.teamBId ? 'WIN' : 'LOSE') : null;
           return `
-          <div class="card" style="margin-bottom:10px; padding:14px;">
+          <div class="card" style="margin-bottom:10px; padding:14px; overflow:hidden;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
               <span class="mono" style="font-size:12px; color:var(--text-low);">🕐 ${escapeHtml(m.time||'-')}</span>
               ${winner ? `<span style="background:rgba(45,212,168,0.15);color:var(--mint);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">✅ ຊະນະ: ${escapeHtml(winner.name)}</span>` : `<span style="background:rgba(255,184,46,0.12);color:var(--gold);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">⏳ ລໍຜົນ</span>`}
             </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              ${pkFamilyTeamCardHtml(teamA)}
-              <div style="font-family:var(--f-display); font-weight:800; font-size:16px; color:var(--coral); flex-shrink:0;">VS</div>
-              ${pkFamilyTeamCardHtml(teamB)}
+            <div style="display:flex; align-items:flex-start; gap:4px;">
+              ${pkFamilyTeamCardHtml(teamA, resultA)}
+              <div style="flex-shrink:0; width:36px; display:flex; flex-direction:column; align-items:center; padding-top:6px;">
+                <img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:32px;height:32px;object-fit:contain;">
+              </div>
+              ${pkFamilyTeamCardHtml(teamB, resultB)}
             </div>
+            ${(m.scoreA!=null && m.scoreA!=='') || (m.scoreB!=null && m.scoreB!=='') ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+              <span style="font-family:var(--f-mono); font-weight:800; font-size:16px; color:${resultA==='WIN'?'var(--gold)':'var(--text-mid)'};">⭐ ${fmtInt(m.scoreA||0)}</span>
+              <span style="font-family:var(--f-mono); font-weight:800; font-size:16px; color:${resultB==='WIN'?'var(--gold)':'var(--text-mid)'};">${fmtInt(m.scoreB||0)} ⭐</span>
+            </div>` : ''}
           </div>`;
         }).join('')}
-      `).join('')}
   `;
 }
 
@@ -3674,11 +3685,24 @@ function renderAdminPkFamily(){
               <option value="${m.teamAId}" ${m.winnerId===m.teamAId?'selected':''}>${escapeHtml(teamA?teamA.name:'A')} ຊະນະ</option>
               <option value="${m.teamBId}" ${m.winnerId===m.teamBId?'selected':''}>${escapeHtml(teamB?teamB.name:'B')} ຊະນະ</option>
             </select>
+            <input type="number" placeholder="ຄະແນນ A" value="${m.scoreA||''}" style="width:60px;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px;color:#fff;font-size:11px;margin-left:6px;" onchange="setPkFamilyScore(${ridx},'${m.matchId}', this.value, null)">
+            <input type="number" placeholder="ຄະແນນ B" value="${m.scoreB||''}" style="width:60px;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px;color:#fff;font-size:11px;margin-left:4px;" onchange="setPkFamilyScore(${ridx},'${m.matchId}', null, this.value)">
           </div>`;
         }).join('')}`;
       }).join('') : `<div class="empty-state" style="padding:20px;"><p>ຍັງບໍ່ມີຮອບການແຂ່ງຂັນ — ໃຊ້ Spin ດ້ານເທິງເພື່ອສ້າງຮອບທຳອິດ</p></div>`}
     </div>
   `;
+}
+
+async function setPkFamilyScore(roundIndex, matchId, scoreA, scoreB){
+  const m = (_pkFamilyCache.rounds[roundIndex]||[]).find(x=>x.matchId===matchId) || {};
+  const finalA = scoreA!==null ? scoreA : (m.scoreA||0);
+  const finalB = scoreB!==null ? scoreB : (m.scoreB||0);
+  try{
+    await gasCall('adminSetPkFamilyScore', State.adminPassword, roundIndex, matchId, finalA, finalB);
+    toast('ບັນທຶກຄະແນນສຳເລັດ','success');
+    fetchPkFamilyData();
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
 let _pkFamilyPoolDraft = null;

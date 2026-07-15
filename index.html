@@ -1260,6 +1260,10 @@ function afterRenderHook(){
       if(list) list.innerHTML = renderVjSearchResultsInner();
     });
   }
+  if(document.getElementById('poolWheelCanvas')){
+    renderPoolEntryList();
+    refreshPoolWheel();
+  }
   const adminSearchInput = document.getElementById('vjAdminSearchInput');
   if(adminSearchInput){
     adminSearchInput.addEventListener('input', e => {
@@ -3378,21 +3382,44 @@ function togglePkRow(mid){
 function createSpinWheel(canvasId, items, onFinish){
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
-  const cx = canvas.width/2, cy = canvas.height/2, radius = cx-6;
+  const cx = canvas.width/2, cy = canvas.height/2;
+  const outerRadius = cx - 4;
+  const borderWidth = 14;
+  const radius = outerRadius - borderWidth;
   const COLORS = ['#F5B82E','#2DD4A8','#FF6B5E','#6FB7FF','#C084FC','#FBBF24'];
   let rot = 0;
   function draw(){
     const n = items.length; const arc = (2*Math.PI)/n;
     ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // ຂອບສີຄີມ + ຈຸດຮອບຂອບ
+    ctx.beginPath(); ctx.arc(cx,cy,outerRadius,0,2*Math.PI);
+    ctx.fillStyle = '#FDF6E3'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#E8C574'; ctx.stroke();
+    const dotCount = 20;
+    for(let d=0; d<dotCount; d++){
+      const da = (2*Math.PI/dotCount)*d;
+      const dx = cx + Math.cos(da)*(outerRadius-7);
+      const dy = cy + Math.sin(da)*(outerRadius-7);
+      ctx.beginPath(); ctx.arc(dx,dy,3,0,2*Math.PI);
+      ctx.fillStyle = '#F3D9A4'; ctx.fill();
+    }
+
     items.forEach((label,i)=>{
       const a = rot + i*arc;
       ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,radius,a,a+arc); ctx.closePath();
       ctx.fillStyle = COLORS[i%COLORS.length]; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
       ctx.save(); ctx.translate(cx,cy); ctx.rotate(a+arc/2);
-      ctx.fillStyle='#fff'; ctx.font='bold 13px Inter'; ctx.textAlign='right';
-      ctx.fillText(String(label).slice(0,12), radius-10, 5);
+      ctx.fillStyle = '#1a1206';           // ← ໂຕໜັງສືສີດຳ
+      ctx.font = 'bold 12px Inter'; ctx.textAlign = 'right';
+      ctx.fillText(String(label).slice(0,12), radius-10, 4);
       ctx.restore();
     });
+
+    ctx.beginPath(); ctx.arc(cx,cy,radius*0.16,0,2*Math.PI);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.strokeStyle = '#E8C574'; ctx.lineWidth = 3; ctx.stroke();
   }
   draw();
   function spin(){
@@ -3611,15 +3638,7 @@ function renderAdminPkFamily(){
       <p>ຈັດຕັ້ງທີມ, ໝູນສຸ່ມຈັບຄູ່, ແລະ ບັນທຶກຜົນຊະນະແຕ່ລະຮອບ</p>
     </div>
     
-    <div class="card">
-      <div class="flex-between" style="margin-bottom:10px;">
-        <b>0️⃣ ຄັດເລືອກ VJ ເຂົ້າແຂ່ງຂັນ (${(data.pool||[]).length}/24)</b>
-        <button class="btn btn-primary btn-sm" onclick="openPkFamilyPoolModal()">🎡 ເປີດວົງລໍ້ຄັດເລືອກ</button>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${(data.pool||[]).map(v=>`<span class="chip">${escapeHtml(v.vjName||v.bigoId)}</span>`).join('') || '<span class="text-low">ຍັງບໍ່ໄດ້ຄັດເລືອກ</span>'}
-      </div>
-    </div>
+    ${renderPkFamilyPoolSection()}
 
     <div class="card">
       <div class="flex-between" style="margin-bottom:10px;">
@@ -3680,24 +3699,97 @@ function renderAdminPkFamily(){
 }
 
 let _pkFamilyPoolDraft = [];
-function openPkFamilyPoolModal(){
-  const allVj = (_vjLiveCache||[]).map(v=>({bigoId:v.bigoId, vjName:v.vjName, photoUrl:findPhotoUrlByBigoId(v.bigoId)}));
-  // ສຸ່ມເອົາ 24 ຄົນເລີ່ມຕົ້ນ (ຖ້າມີພຽງພໍ) ແອັດມິນສາມາດແກ້ໄຂໄດ້ຫຼັງຈາກນັ້ນ
-  const shuffled = allVj.slice().sort(()=>Math.random()-0.5);
-  _pkFamilyPoolDraft = (_pkFamilyCache.pool && _pkFamilyCache.pool.length) ? _pkFamilyCache.pool.slice() : shuffled.slice(0,24);
+function renderPkFamilyPoolSection(){
+  if(!_pkFamilyPoolDraft){
+    const cache = _pkFamilyCache || {};
+    _pkFamilyPoolDraft = (cache.pool && cache.pool.length) ? cache.pool.slice() : [];
+  }
+  return `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:10px;">
+        <b>0️⃣ ຄັດເລືອກ VJ ເຂົ້າແຂ່ງຂັນ (${_pkFamilyPoolDraft.length}/24)</b>
+        <button class="btn btn-ghost btn-sm" onclick="reshufflePoolDraftFromLive()">🔀 ສຸ່ມຈາກ Live VJ</button>
+      </div>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="poolWheelCanvas" width="260" height="260" style="flex-shrink:0;"></canvas>
+        <div style="flex:1; min-width:240px;">
+          <div id="poolEntryList" style="max-height:320px; overflow-y:auto; margin-bottom:10px;"></div>
+          <div class="field-row">
+            <div class="field" style="flex:2;">
+              <label>ເພີ່ມ VJ ຈາກ Live Data</label>
+              <select id="poolAddVjSelect">
+                <option value="">-- ເລືອກ VJ --</option>
+                ${(_vjLiveCache||[]).map(v=>`<option value="${escapeHtml(v.bigoId)}">${escapeHtml(v.vjName||v.bigoId)} (${escapeHtml(v.bigoId)})</option>`).join('')}
+              </select>
+            </div>
+            <div class="field" style="flex:1; display:flex; align-items:flex-end;">
+              <button class="btn btn-primary btn-sm btn-block" onclick="addVjToPoolDraft()">${ICONS.plus} ເພີ່ມ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitPkFamilyPool()">${ICONS.check} ບັນທຶກລາຍຊື່ນີ້ (${_pkFamilyPoolDraft.length} ຄົນ)</button>
+    </div>`;
+}
 
-  openModal(`
-    <div class="modal-head"><h3>🎡 ຄັດເລືອກ VJ ເຂົ້າແຂ່ງຂັນ (${_pkFamilyPoolDraft.length}/24)</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <div style="display:flex; gap:14px; flex-wrap:wrap;">
-      <canvas id="poolWheelCanvas" width="260" height="260" style="flex-shrink:0;"></canvas>
-      <div style="flex:1; min-width:220px; max-height:280px; overflow-y:auto;" id="poolEntryList"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
-      <button class="btn btn-primary" onclick="submitPkFamilyPool()">${ICONS.check} ບັນທຶກ 24 ຄົນນີ້</button>
-    </div>`);
-  renderPoolEntryList();
-  createSpinWheel('poolWheelCanvas', _pkFamilyPoolDraft.map(v=>v.vjName||v.bigoId), ()=>{}); // ພຽງໂຊລາຍຊື່ (ບໍ່ຕ້ອງ spin ໃນຂັ້ນນີ້)
+function renderPoolEntryList(){
+  const el = document.getElementById('poolEntryList');
+  if(!el) return;
+  el.innerHTML = _pkFamilyPoolDraft.length ? _pkFamilyPoolDraft.map((v,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px; background:var(--ink); border:1px solid var(--line); border-radius:10px; padding:6px 8px;">
+      <span class="text-low mono" style="font-size:11px;width:20px;">${i+1}</span>
+      <input type="text" value="${escapeHtml(v.vjName||v.bigoId)}" style="flex:1;background:none;border:none;color:var(--text-hi);font-size:12.5px;" onchange="renamePoolDraftEntry(${i}, this.value)">
+      <select style="background:var(--ink-3); border:1px solid var(--line); border-radius:6px; font-size:11px; color:var(--text-mid); max-width:110px;" onchange="if(this.value) swapPoolDraftEntry(${i}, this.value); this.value='';">
+        <option value="">ປ່ຽນເປັນ...</option>
+        ${(_vjLiveCache||[]).map(lv=>`<option value="${escapeHtml(lv.bigoId)}">${escapeHtml(lv.vjName||lv.bigoId)}</option>`).join('')}
+      </select>
+      <button class="icon-btn" style="width:26px;height:26px;color:var(--coral);flex-shrink:0;" onclick="removeFromPoolDraft(${i})">${ICONS.close}</button>
+    </div>`).join('') : `<div class="empty-state" style="padding:14px;"><p>ຍັງບໍ່ມີລາຍຊື່ — ເພີ່ມຈາກລຸ່ມນີ້ ຫຼື ກົດ "ສຸ່ມຈາກ Live VJ"</p></div>`;
+}
+
+function refreshPoolWheel(){
+  const items = _pkFamilyPoolDraft.length ? _pkFamilyPoolDraft.map(v=>v.vjName||v.bigoId) : ['ວ່າງ'];
+  createSpinWheel('poolWheelCanvas', items, ()=>{});
+}
+
+function addVjToPoolDraft(){
+  const sel = document.getElementById('poolAddVjSelect');
+  const bigoId = sel.value;
+  if(!bigoId){ toast('ກະລຸນາເລືອກ VJ','error'); return; }
+  if(_pkFamilyPoolDraft.some(v=>v.bigoId===bigoId)){ toast('VJ ນີ້ຢູ່ໃນລາຍຊື່ແລ້ວ','error'); return; }
+  if(_pkFamilyPoolDraft.length>=24){ toast('ຄົບ 24 ຄົນແລ້ວ','error'); return; }
+  const vjData = (_vjLiveCache||[]).find(v=>v.bigoId===bigoId);
+  _pkFamilyPoolDraft.push({ bigoId, vjName: vjData?vjData.vjName:bigoId, photoUrl: findPhotoUrlByBigoId(bigoId) });
+  renderPoolEntryList(); refreshPoolWheel();
+  sel.value='';
+}
+function renamePoolDraftEntry(i, newName){
+  if(!_pkFamilyPoolDraft[i]) return;
+  _pkFamilyPoolDraft[i].vjName = newName.trim() || _pkFamilyPoolDraft[i].bigoId;
+  refreshPoolWheel();
+}
+function swapPoolDraftEntry(i, newBigoId){
+  const vjData = (_vjLiveCache||[]).find(v=>v.bigoId===newBigoId);
+  if(!vjData) return;
+  _pkFamilyPoolDraft[i] = { bigoId:newBigoId, vjName:vjData.vjName||newBigoId, photoUrl: findPhotoUrlByBigoId(newBigoId) };
+  renderPoolEntryList(); refreshPoolWheel();
+  toast('ປ່ຽນ VJ ສຳເລັດ (ຍັງບໍ່ໄດ້ບັນທຶກ)','info');
+}
+function removeFromPoolDraft(i){
+  _pkFamilyPoolDraft.splice(i,1);
+  renderPoolEntryList(); refreshPoolWheel();
+}
+function reshufflePoolDraftFromLive(){
+  const allVj = (_vjLiveCache||[]).map(v=>({bigoId:v.bigoId, vjName:v.vjName, photoUrl:findPhotoUrlByBigoId(v.bigoId)}));
+  _pkFamilyPoolDraft = allVj.slice().sort(()=>Math.random()-0.5).slice(0,24);
+  renderPoolEntryList(); refreshPoolWheel();
+}
+async function submitPkFamilyPool(){
+  try{
+    await gasCall('adminSavePkFamilyPool', State.adminPassword, _pkFamilyPoolDraft);
+    _pkFamilyCache.pool = _pkFamilyPoolDraft.slice();
+    toast('ບັນທຶກລາຍຊື່ VJ ສຳເລັດ','success');
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
 function openGroupAssignWheelModal(){

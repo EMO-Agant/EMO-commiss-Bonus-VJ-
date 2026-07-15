@@ -1264,6 +1264,13 @@ function afterRenderHook(){
     renderPoolEntryList();
     refreshPoolWheel();
   }
+  if(document.getElementById('teamWheelCanvas')){
+    renderTeamEntryList();
+    refreshTeamWheel();
+  }
+  if(document.getElementById('matchupWheel')){
+    refreshMatchupWheel();
+  }
   const adminSearchInput = document.getElementById('vjAdminSearchInput');
   if(adminSearchInput){
     adminSearchInput.addEventListener('input', e => {
@@ -3640,33 +3647,9 @@ function renderAdminPkFamily(){
     
     ${renderPkFamilyPoolSection()}
 
-    <div class="card">
-      <div class="flex-between" style="margin-bottom:10px;">
-        <b>1️⃣ ຈັດຕັ້ງທີມ (${teams.length} ທີມ)</b>
-        <button class="btn btn-primary btn-sm" onclick="openGroupAssignWheelModal()">🎡 ສຸ່ມແບ່ງກຸ່ມ (8x3)</button>
-      </div>
-      ${teams.length ? teams.map(t=>`
-        <div class="vj-row">
-          <div class="vj-avatar">${t.name.slice(-1)}</div>
-          <div class="vj-info">
-            <div class="name">${escapeHtml(t.name)}</div>
-            <div class="meta">${(t.members||[]).map(m=>escapeHtml(m.vjName||m.bigoId)).join(', ')}</div>
-          </div>
-          <button class="icon-btn" style="color:var(--coral);" onclick="deletePkFamilyTeam('${t.id}')">${ICONS.trash}</button>
-        </div>`).join('') : `<div class="empty-state" style="padding:20px;"><p>ຍັງບໍ່ມີທີມ</p></div>`}
-    </div>
+    ${renderPkFamilyTeamsSection()}
 
-    <div class="card" style="margin-top:14px;">
-      <b>2️⃣ ໝູນສຸ່ມຈັບຄູ່ (Spin) — ຮອບໃໝ່</b>
-      <p class="text-low" style="font-size:12px; margin:6px 0 12px;">ເລືອກທີມທີ່ຈະເຂົ້າຮອບນີ້ (ຄວນເປັນເລກຄູ່ ເຊັ່ນ 8, 4, 2 ທີມ) ແລ້ວກົດ Spin ເພື່ອສຸ່ມຈັບຄູ່</p>
-      <div id="pkFamilySpinPool" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        ${teams.map(t=>`<label style="display:flex; align-items:center; gap:5px; background:var(--ink-3); border:1px solid var(--line); border-radius:20px; padding:5px 12px; font-size:12.5px; cursor:pointer;">
-          <input type="checkbox" class="pkFamilySpinCheck" value="${t.id}" style="accent-color:var(--gold);"> ${escapeHtml(t.name)}
-        </label>`).join('')}
-      </div>
-      <div id="pkFamilyWheelArea" style="text-align:center; margin-bottom:12px;"></div>
-      <button class="btn btn-primary btn-block" onclick="spinPkFamilyMatchup()">🎡 ໝູນສຸ່ມຈັບຄູ່</button>
-    </div>
+    ${renderPkFamilySpinSection()}
 
     <div class="card" style="margin-top:14px;">
       <div class="flex-between" style="margin-bottom:10px;"><b>3️⃣ ຮອບການແຂ່ງຂັນ &amp; ບັນທຶກຜົນ</b>
@@ -3710,9 +3693,9 @@ function renderPkFamilyPoolSection(){
         <b>0️⃣ ຄັດເລືອກ VJ ເຂົ້າແຂ່ງຂັນ (${_pkFamilyPoolDraft.length}/24)</b>
         <button class="btn btn-ghost btn-sm" onclick="reshufflePoolDraftFromLive()">🔀 ສຸ່ມຈາກ Live VJ</button>
       </div>
-      <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
-        <canvas id="poolWheelCanvas" width="260" height="260" style="flex-shrink:0;"></canvas>
-        <div style="flex:1; min-width:240px;">
+      <div style="display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="poolWheelCanvas" width="340" height="340" style="flex-shrink:0;"></canvas>
+        <div style="flex:1; min-width:260px; margin-left:8px;">
           <div id="poolEntryList" style="max-height:320px; overflow-y:auto; margin-bottom:10px;"></div>
           <div class="field-row">
             <div class="field" style="flex:2;">
@@ -3730,6 +3713,130 @@ function renderPkFamilyPoolSection(){
       </div>
       <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitPkFamilyPool()">${ICONS.check} ບັນທຶກລາຍຊື່ນີ້ (${_pkFamilyPoolDraft.length} ຄົນ)</button>
     </div>`;
+}
+
+/* ---------- ແທບ 1️⃣ ຈັດຕັ້ງທີມ (inline, ຄືແທບ 0️⃣) ---------- */
+let _pkFamilyTeamsDraft = null;
+function renderPkFamilyTeamsSection(){
+  if(!_pkFamilyTeamsDraft){
+    const cache = _pkFamilyCache || {};
+    _pkFamilyTeamsDraft = (cache.teams && cache.teams.length) ? JSON.parse(JSON.stringify(cache.teams)) : [];
+  }
+  return `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:10px;">
+        <b>1️⃣ ຈັດຕັ້ງທີມ (${_pkFamilyTeamsDraft.length} ທີມ)</b>
+        <button class="btn btn-ghost btn-sm" onclick="reshuffleTeamsFromPool()">🔀 ສຸ່ມແບ່ງກຸ່ມໃໝ່ (8x3)</button>
+      </div>
+      <div style="display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="teamWheelCanvas" width="340" height="340" style="flex-shrink:0;"></canvas>
+        <div style="flex:1; min-width:260px; margin-left:8px;">
+          <div id="teamEntryList" style="max-height:340px; overflow-y:auto;"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitPkFamilyTeamsDraft()">${ICONS.check} ບັນທຶກທີມ (${_pkFamilyTeamsDraft.length} ທີມ)</button>
+    </div>`;
+}
+function renderTeamEntryList(){
+  const el = document.getElementById('teamEntryList');
+  if(!el) return;
+  el.innerHTML = _pkFamilyTeamsDraft.length ? _pkFamilyTeamsDraft.map((t,i)=>`
+    <div style="background:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px;">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <span class="text-low mono" style="font-size:11px;width:20px;">${i+1}</span>
+        <input type="text" value="${escapeHtml(t.name)}" style="flex:1;background:none;border:none;color:var(--gold);font-weight:700;font-size:12.5px;" onchange="renameTeamDraftEntry(${i}, this.value)">
+        <button class="icon-btn" style="width:24px;height:24px;color:var(--coral);flex-shrink:0;" onclick="removeTeamDraftEntry(${i})">${ICONS.close}</button>
+      </div>
+      <div style="font-size:11.5px; color:var(--text-mid); padding-left:26px;">${(t.members||[]).map(m=>escapeHtml(m.vjName||m.bigoId)).join(', ')}</div>
+    </div>`).join('') : `<div class="empty-state" style="padding:14px;"><p>ຍັງບໍ່ມີທີມ — ກົດ "ສຸ່ມແບ່ງກຸ່ມໃໝ່"</p></div>`;
+}
+function refreshTeamWheel(){
+  const items = _pkFamilyTeamsDraft.length ? _pkFamilyTeamsDraft.map(t=>t.name) : ['ວ່າງ'];
+  createSpinWheel('teamWheelCanvas', items, ()=>{});
+}
+function renameTeamDraftEntry(i, newName){
+  if(!_pkFamilyTeamsDraft[i]) return;
+  _pkFamilyTeamsDraft[i].name = newName.trim() || _pkFamilyTeamsDraft[i].name;
+  refreshTeamWheel();
+}
+function removeTeamDraftEntry(i){
+  _pkFamilyTeamsDraft.splice(i,1);
+  renderTeamEntryList(); refreshTeamWheel();
+}
+function reshuffleTeamsFromPool(){
+  const pool = ((_pkFamilyCache && _pkFamilyCache.pool) || []).slice();
+  if(pool.length < 3){ toast('ຕ້ອງມີ VJ ໃນ pool ຢ່າງໜ້ອຍ 3 ຄົນ (ໄປແທບ 0️⃣ ກ່ອນ)','error'); return; }
+  const shuffled = pool.slice().sort(()=>Math.random()-0.5);
+  const groupCount = Math.ceil(shuffled.length/3);
+  _pkFamilyTeamsDraft = [];
+  for(let g=0; g<groupCount; g++){
+    _pkFamilyTeamsDraft.push({ id:'team_'+Date.now()+'_'+g, name:'Group '+String.fromCharCode(65+g), members: shuffled.slice(g*3,g*3+3) });
+  }
+  renderTeamEntryList(); refreshTeamWheel();
+}
+async function submitPkFamilyTeamsDraft(){
+  try{
+    await gasCall('adminSavePkFamilyTeams', State.adminPassword, _pkFamilyTeamsDraft);
+    _pkFamilyCache.teams = _pkFamilyTeamsDraft.slice();
+    toast('ບັນທຶກທີມສຳເລັດ','success');
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+
+/* ---------- ແທບ 2️⃣ ໝູນສຸ່ມຈັບຄູ່ (inline, ຄືແທບ 0️⃣) ---------- */
+function renderPkFamilySpinSection(){
+  const teams = (_pkFamilyCache && _pkFamilyCache.teams) || [];
+  return `
+    <div class="card" style="margin-top:14px;">
+      <b>2️⃣ ໝູນສຸ່ມຈັບຄູ່ (Spin) — ຮອບໃໝ່</b>
+      <p class="text-low" style="font-size:12px; margin:6px 0 12px;">ເລືອກທີມທີ່ຈະເຂົ້າຮອບນີ້ (ຄວນເປັນເລກຄູ່ ເຊັ່ນ 8, 4, 2 ທີມ) ແລ້ວກົດ Spin ເພື່ອສຸ່ມຈັບຄູ່</p>
+      <div style="display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="matchupWheel" width="340" height="340" style="flex-shrink:0;"></canvas>
+        <div style="flex:1; min-width:260px; margin-left:8px;">
+          <div id="pkFamilySpinPool" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            ${teams.length ? teams.map(t=>`<label style="display:flex; align-items:center; gap:5px; background:var(--ink-3); border:1px solid var(--line); border-radius:20px; padding:5px 12px; font-size:12.5px; cursor:pointer;">
+              <input type="checkbox" class="pkFamilySpinCheck" value="${t.id}" checked style="accent-color:var(--gold);" onchange="refreshMatchupWheel()"> ${escapeHtml(t.name)}
+            </label>`).join('') : `<div class="empty-state" style="padding:14px;"><p>ຍັງບໍ່ມີທີມ — ຈັດຕັ້ງທີມກ່ອນໃນຂໍ້ 1️⃣</p></div>`}
+          </div>
+          <div id="pkFamilySpinResult" style="font-size:12.5px; color:var(--mint); font-weight:700; margin-bottom:8px;"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="spinPkFamilyMatchup()">🎡 ໝູນສຸ່ມຈັບຄູ່</button>
+    </div>`;
+}
+function refreshMatchupWheel(){
+  const checks = document.querySelectorAll('.pkFamilySpinCheck:checked');
+  const teamsById = {}; ((_pkFamilyCache && _pkFamilyCache.teams)||[]).forEach(t=>teamsById[t.id]=t);
+  const items = checks.length ? Array.from(checks).map(c=>teamsById[c.value]?.name || '-') : ['ວ່າງ'];
+  createSpinWheel('matchupWheel', items, ()=>{});
+}
+
+async function spinPkFamilyMatchup(){
+  const checks = document.querySelectorAll('.pkFamilySpinCheck:checked');
+  const teamIds = Array.from(checks).map(c=>c.value);
+  if(teamIds.length < 2 || teamIds.length % 2 !== 0){
+    toast('ກະລຸນາເລືອກທີມເປັນຈຳນວນຄູ່ (2,4,8...)','error'); return;
+  }
+  const teamsById = {}; (_pkFamilyCache.teams||[]).forEach(t=>teamsById[t.id]=t);
+  const wheel = createSpinWheel('matchupWheel', teamIds.map(id=>teamsById[id].name), ()=>{});
+  wheel.spin();
+  await new Promise(r=>setTimeout(r, 4300));
+
+  const shuffled = teamIds.slice();
+  for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+  const matches = [];
+  for(let i=0;i<shuffled.length;i+=2){
+    matches.push({ matchId: 'm_'+Date.now()+'_'+i, teamAId: shuffled[i], teamBId: shuffled[i+1], time: '', winnerId: '' });
+  }
+  const roundIndex = (_pkFamilyCache.rounds||[]).length;
+  try{
+    await gasCall('adminSavePkFamilyRound', State.adminPassword, roundIndex, matches);
+    if(!_pkFamilyCache.rounds) _pkFamilyCache.rounds = [];
+    _pkFamilyCache.rounds[roundIndex] = matches;
+    const resultEl = document.getElementById('pkFamilySpinResult');
+    if(resultEl) resultEl.textContent = `✅ ຈັບຄູ່ສຳເລັດ! ${matches.length} ຄູ່`;
+    toast('ຈັບຄູ່ Round ໃໝ່ສຳເລັດ','success');
+    setTimeout(()=>setView('admin-pkfamily'), 900);
+  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
 function renderPoolEntryList(){

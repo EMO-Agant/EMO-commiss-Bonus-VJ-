@@ -3681,7 +3681,7 @@ function renderAdminPkFamily(){
   `;
 }
 
-let _pkFamilyPoolDraft = [];
+let _pkFamilyPoolDraft = null;
 function renderPkFamilyPoolSection(){
   if(!_pkFamilyPoolDraft){
     const cache = _pkFamilyCache || {};
@@ -3779,6 +3779,7 @@ async function submitPkFamilyTeamsDraft(){
     await gasCall('adminSavePkFamilyTeams', State.adminPassword, _pkFamilyTeamsDraft);
     _pkFamilyCache.teams = _pkFamilyTeamsDraft.slice();
     toast('ບັນທຶກທີມສຳເລັດ','success');
+    setView('admin-pkfamily');
   }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
@@ -3929,100 +3930,7 @@ async function submitGroupAssign(){
   }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
-function renderPoolEntryList(){
-  const el = document.getElementById('poolEntryList');
-  if(!el) return;
-  el.innerHTML = _pkFamilyPoolDraft.map((v,i)=>`
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-      <span class="text-low mono" style="font-size:11px;width:20px;">${i+1}</span>
-      <span style="flex:1;font-size:12.5px;">${escapeHtml(v.vjName||v.bigoId)}</span>
-      <button class="icon-btn" style="width:26px;height:26px;color:var(--coral);" onclick="removeFromPoolDraft(${i})">${ICONS.close}</button>
-    </div>`).join('') + `<button class="btn btn-ghost btn-sm btn-block" onclick="reshufflePoolDraft()">🔀 ສຸ່ມໃໝ່</button>`;
-}
-function removeFromPoolDraft(i){ _pkFamilyPoolDraft.splice(i,1); renderPoolEntryList(); }
-function reshufflePoolDraft(){
-  const allVj = (_vjLiveCache||[]).map(v=>({bigoId:v.bigoId, vjName:v.vjName}));
-  _pkFamilyPoolDraft = allVj.slice().sort(()=>Math.random()-0.5).slice(0,24);
-  renderPoolEntryList();
-  createSpinWheel('poolWheelCanvas', _pkFamilyPoolDraft.map(v=>v.vjName||v.bigoId), ()=>{});
-}
-async function submitPkFamilyPool(){
-  try{
-    await gasCall('adminSavePkFamilyPool', State.adminPassword, _pkFamilyPoolDraft);
-    _pkFamilyCache.pool = _pkFamilyPoolDraft;
-    toast('ບັນທຶກລາຍຊື່ 24 ຄົນສຳເລັດ','success');
-    closeModal(); setView('admin-pkfamily');
-  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
-}
 
-function filterPkFamilyVjPool(q){
-  q = q.trim().toLowerCase();
-  document.querySelectorAll('#pkFamilyVjPoolList label').forEach(el=>{
-    el.style.display = el.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
-  });
-}
-async function submitPkFamilyTeam(){
-  const name = document.getElementById('pkFamilyTeamName').value.trim();
-  const checks = document.querySelectorAll('.pkFamilyMemberCheck:checked');
-  if(!name){ toast('ກະລຸນາປ້ອນຊື່ທີມ','error'); return; }
-  if(checks.length !== 3){ toast('ກະລຸນາເລືອກ VJ 3 ຄົນ (ເລືອກແລ້ວ '+checks.length+')','error'); return; }
-  const members = Array.from(checks).map(c=>JSON.parse(c.value));
-  const teams = (_pkFamilyCache.teams||[]).slice();
-  teams.push({ id:'team_'+Date.now(), name, members });
-  try{
-    await gasCall('adminSavePkFamilyTeams', State.adminPassword, teams);
-    _pkFamilyCache.teams = teams;
-    toast('ສ້າງທີມສຳເລັດ','success');
-    closeModal();
-    setView('admin-pkfamily');
-  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
-}
-async function deletePkFamilyTeam(teamId){
-  const teams = (_pkFamilyCache.teams||[]).filter(t=>t.id!==teamId);
-  try{
-    await gasCall('adminSavePkFamilyTeams', State.adminPassword, teams);
-    _pkFamilyCache.teams = teams;
-    toast('ລຶບທີມສຳເລັດ','success');
-    setView('admin-pkfamily');
-  }catch(e){ toast(e.message||'ລຶບບໍ່ສຳເລັດ','error'); }
-}
-
-// ★ Spin ແບບງ່າຍ (ສຸ່ມ shuffle + animation ໝູນ) ຈັບຄູ່ທີມທີ່ຖືກເລືອກ
-async function spinPkFamilyMatchup(){
-  const checks = document.querySelectorAll('.pkFamilySpinCheck:checked');
-  const teamIds = Array.from(checks).map(c=>c.value);
-  if(teamIds.length < 2 || teamIds.length % 2 !== 0){
-    toast('ກະລຸນາເລືອກທີມເປັນຈຳນວນຄູ່ (2,4,8...)','error'); return;
-  }
-  const wheelArea = document.getElementById('pkFamilyWheelArea');
-  const teamsById = {}; (_pkFamilyCache.teams||[]).forEach(t=>teamsById[t.id]=t);
-
-  wheelArea.innerHTML = `<canvas id="matchupWheel" width="240" height="240" style="margin:0 auto;display:block;"></canvas>`;
-  const wheel = createSpinWheel('matchupWheel', teamIds.map(id=>teamsById[id].name), ()=>{});
-  wheel.spin();
-  await new Promise(r=>setTimeout(r, 4300)); // ລໍໃຫ້ animation ຈົບ
-
-  // shuffle
-  const shuffled = teamIds.slice();
-  for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
-  const matches = [];
-  for(let i=0;i<shuffled.length;i+=2){
-    matches.push({
-      matchId: 'm_'+Date.now()+'_'+i,
-      teamAId: shuffled[i], teamBId: shuffled[i+1],
-      time: '', winnerId: ''
-    });
-  }
-  const roundIndex = (_pkFamilyCache.rounds||[]).length;
-  try{
-    await gasCall('adminSavePkFamilyRound', State.adminPassword, roundIndex, matches);
-    if(!_pkFamilyCache.rounds) _pkFamilyCache.rounds = [];
-    _pkFamilyCache.rounds[roundIndex] = matches;
-    wheelArea.innerHTML = `<div style="color:var(--mint); font-weight:700;">✅ ຈັບຄູ່ສຳເລັດ! ${matches.length} ຄູ່</div>`;
-    toast('ຈັບຄູ່ Round ໃໝ່ສຳເລັດ','success');
-    setTimeout(()=>setView('admin-pkfamily'), 800);
-  }catch(e){ toast(e.message||'ບັນທຶກບໍ່ສຳເລັດ','error'); }
-}
 async function setPkFamilyWinner(roundIndex, matchId, winnerId){
   if(!winnerId) return;
   try{

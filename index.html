@@ -876,7 +876,7 @@ function startBannerAutoplay(){
   _bannerAutoplayTimer = setInterval(()=>{
     State.bannerSlideIdx = (State.bannerSlideIdx + 1) % list.length;
     updateBannerSlideUI();
-  }, 8000);
+  }, 7000);
 }
 function goToBannerSlide(i){
   const list = State.banners.banners || [];
@@ -3651,7 +3651,7 @@ function startPkFamilyBannerAutoplay(){
   _pkFamilyBannerAutoplayTimer = setInterval(()=>{
     State.pkFamilyBannerSlideIdx = (State.pkFamilyBannerSlideIdx + 1) % list.length;
     updatePkFamilyBannerSlideUI();
-  }, 8000);
+  }, 7000);
 }
 function goToPkFamilyBannerSlide(i){
   const list = State.pkFamilyBanners.banners || [];
@@ -3672,7 +3672,7 @@ function pkFamilyBannerSliderHtml(){
     <div class="banner-slider pkfamily-slider-wrap">
       ${list.map((b,i)=>`
         <div class="banner-slide pkfamily-slide ${i===State.pkFamilyBannerSlideIdx?'active':''}">
-          <img src="${escapeHtml(b.imageUrl)}" onclick="${b.link?`window.open('${escapeHtml(b.link)}','_blank')`:''}" onerror="this.style.opacity='0.15'">
+          <img src="${escapeHtml(b.imageUrl)}" onclick="${b.link?`window.open('${escapeHtml(b.link)}','_blank')`:''}" onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:13px;\'>⚠️ ໂຫລດຮູບບໍ່ໄດ້</div>'">
         </div>`).join('')}
       ${list.length>1?`
         <button class="banner-arrow prev" onclick="goToPkFamilyBannerSlide(${State.pkFamilyBannerSlideIdx-1})">${ICONS.chevron.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" style="transform:scaleX(-1)"')}</button>

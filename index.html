@@ -876,7 +876,7 @@ function startBannerAutoplay(){
   _bannerAutoplayTimer = setInterval(()=>{
     State.bannerSlideIdx = (State.bannerSlideIdx + 1) % list.length;
     updateBannerSlideUI();
-  }, 4000);
+  }, 8000);
 }
 function goToBannerSlide(i){
   const list = State.banners.banners || [];
@@ -3651,7 +3651,7 @@ function startPkFamilyBannerAutoplay(){
   _pkFamilyBannerAutoplayTimer = setInterval(()=>{
     State.pkFamilyBannerSlideIdx = (State.pkFamilyBannerSlideIdx + 1) % list.length;
     updatePkFamilyBannerSlideUI();
-  }, 4000);
+  }, 8000);
 }
 function goToPkFamilyBannerSlide(i){
   const list = State.pkFamilyBanners.banners || [];

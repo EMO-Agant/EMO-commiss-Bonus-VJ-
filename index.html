@@ -1614,7 +1614,7 @@ function podiumHtml(top3) {
       </div>
     </div>`;
 }
-function emptyStateHtml(icon, title, desc){
+function emptyStateHtml(icon, title, desc){...}
   return `<div class="empty-state fade-in"><img src="https://i.postimg.cc/V67nf2bN/icon-Tofy.png" style="width:150px;height:150px;object-fit:contain;display:block;margin:0 auto 12px;opacity:0.9;"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc)}</p></div>`;
 }
 
@@ -1729,7 +1729,7 @@ function renderBonus(){
   if(!history.length){
     return `
       <div class="page-head fade-in"><p class="eyebrow">ໂບນັດຂອງຂ້ອຍ</p><h1>${escapeHtml(State.myBigoId)}</h1></div>
-      ${emptyStateHtml('inbox','ບໍ່ພົບຂໍ້ມູນ','ບໍ່ພົບ Bigo ID ນີ້ໃນຖານຂໍ້ມູນ — ກວດສອບການພິມ ຫຼື ປ່ຽນ ID')}
+      ${emptyStateHtmlLogo('ບໍ່ພົບຂໍ້ມູນ','ບໍ່ພົບ Bigo ID ນີ້ໃນຖານຂໍ້ມູນ — ກວດສອບການພິມ ຫຼື ປ່ຽນ ID')}
       <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="clearMyBigoId()">ປ່ຽນ Bigo ID</button>`;
   }
   const totalEarned = history.reduce((a,h)=>a+(Number(h.vj.bonusVjUSD)||0),0);
@@ -3721,7 +3721,6 @@ function renderPkFamily(){
       <h1><img src="https://i.postimg.cc/V67nf2bN/icon-Tofy.png" style="width:36px;height:36px;object-fit:contain;vertical-align:-7px;margin-right:6px;">PK Family 3v3</h1>
       <p>ຕາຕະລາງແຂ່ງຂັນ EMO PK Family — ${(data.teams||[]).length} ທີມ</p>
     </div>
-    ${pkFamilyBannerSliderHtml()}
     ${!rounds.length ? emptyStateHtml('inbox','ຍັງບໍ່ມີການແຂ່ງຂັນ','PK Family ຈະຈັດຂຶ້ນໄວໆນີ້') :
       rounds.map((matches, ridx) => `
         <div class="section-label">${roundLabel(ridx, rounds.length)}</div>

@@ -410,9 +410,18 @@ table.data .num{ font-family:var(--f-mono); text-align:right; }
 .banner-dots{ position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; gap:6px; z-index:5; }
 .banner-dot{ width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.4); cursor:pointer; transition:all .2s; border:none; padding:0; }
 .banner-dot.active{ background:#fff; width:18px; border-radius:4px; }
-.banner-arrow{ position:absolute; top:50%; transform:translateY(-50%); width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,0.4); color:#fff; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; z-index:5; backdrop-filter:blur(4px); }
+.banner-arrow{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:32px; height:32px; border-radius:50%;
+  background:rgba(0,0,0,0.4); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer;
+  z-index:20;      
+  pointer-events:auto;  
+  backdrop-filter:blur(4px);
+}
 .banner-arrow.prev{ left:10px; } .banner-arrow.next{ right:10px; }
-.banner-arrow svg{ width:18px; height:18px; }
+.banner-arrow svg{ width:18px; height:18px; pointer-events:none; }
 .ticker-wrap{ position:relative; overflow:hidden; background:linear-gradient(90deg, var(--ink-3), var(--ink-2)); border:1px solid var(--line); border-radius:var(--radius-md); padding:9px 0; margin-bottom:14px; display:flex; align-items:center; }
 .ticker-icon{ flex-shrink:0; width:30px; height:30px; margin-left:10px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; color:#21170a; }
 .ticker-icon svg{ width:16px; height:16px; }

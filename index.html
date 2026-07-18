@@ -864,6 +864,7 @@ function getVisibleAdminNav(){
 function setView(view, opts){
   State.view = view;
   if(opts && opts.month) State.activeMonth = opts.month;
+  if(view === 'pkfamily' || view === 'admin-pkfamily'){ _pkFamilyCache = null; }
   render();
   window.scrollTo({top:0, behavior:'instant'});
 }
@@ -3672,7 +3673,7 @@ function pkFamilyBannerSliderHtml(){
     <div class="banner-slider pkfamily-slider-wrap">
       ${list.map((b,i)=>`
         <div class="banner-slide pkfamily-slide ${i===State.pkFamilyBannerSlideIdx?'active':''}">
-          <img src="${escapeHtml(b.imageUrl)}" onclick="${b.link?`window.open('${escapeHtml(b.link)}','_blank')`:''}" onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:13px;\'>⚠️ ໂຫລດຮູບບໍ່ໄດ້</div>'">
+          <img src="${escapeHtml(b.imageUrl)}" onclick="${b.link?`window.open('${escapeHtml(b.link)}','_blank')`:''}" onerror="this.parentElement.innerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:13px;&quot;>⚠️ ໂຫລດຮູບບໍ່ໄດ້</div>'">
         </div>`).join('')}
       ${list.length>1?`
         <button class="banner-arrow prev" onclick="goToPkFamilyBannerSlide(${State.pkFamilyBannerSlideIdx-1})">${ICONS.chevron.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" style="transform:scaleX(-1)"')}</button>

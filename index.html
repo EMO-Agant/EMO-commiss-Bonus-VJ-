@@ -1262,7 +1262,6 @@ function skeletonHtml(){
     <div class="skeleton" style="height:220px; margin-top:14px;"></div>`;
 }
 function afterRenderHook(){
-  scrollActiveChipIntoView();
   if(document.querySelector('.banner-slider:not(.pkfamily-slider-wrap)')){ updateBannerSlideUI(); startBannerAutoplay(); }
   if(document.querySelector('.pkfamily-slider-wrap')){ updatePkFamilyBannerSlideUI(); startPkFamilyBannerAutoplay(); }
   const searchInput = document.getElementById('vjSearchInput');
@@ -2953,18 +2952,10 @@ function applyPreset(name){
 /* ============================================================================
    VIEW: VJ LIVE DATA
 ============================================================================ */
-let _vjLiveCacheByMonth = {};
 let _vjLiveCache = null;
 let _vjLiveLoading = false;
 let _vjLiveAutoRefreshTimer = null;
-async function fetchVjLiveData(monthKey, force) {
-  const _mk = monthKey || State.activeLiveMonth || '__default__';
-  if (!force && _vjLiveCacheByMonth[_mk]) {
-    _vjLiveCache = _vjLiveCacheByMonth[_mk];
-    if (State.view === 'livedata') { document.getElementById('main').innerHTML = renderVjLiveData(); afterRenderHook(); }
-    return;
-  }
-  if (_vjLiveLoading) return;
+async function fetchVjLiveData(monthKey) {
   if (_vjLiveLoading) return;
   if (!_vjLiveCache) {
     try { _vjLiveCache = JSON.parse(localStorage.getItem('emo_cache_vjlive') || 'null'); } catch(e){}
@@ -2974,7 +2965,6 @@ async function fetchVjLiveData(monthKey, force) {
     const res = await gasCall('getVjLiveData', monthKey || State.activeLiveMonth || null);
     if (res && !res.error) {
       _vjLiveCache = Array.isArray(res.list) ? res.list : [];
-      _vjLiveCacheByMonth[_mk] = _vjLiveCache;
        try{ localStorage.setItem('emo_cache_vjlive', JSON.stringify(_vjLiveCache)); }catch(e){}
       if (Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
       State.activeLiveMonth = res.month || State.activeLiveMonth;
@@ -2993,7 +2983,6 @@ async function fetchVjLiveData(monthKey, force) {
   }
 }
 function switchLiveMonth(key){ State.activeLiveMonth = key; _vjLiveCache = null; fetchVjLiveData(key); }
-function switchLiveMonth(key){ State.activeLiveMonth = key; fetchVjLiveData(key); }
 function startVjLiveAutoRefresh(){
   stopVjLiveAutoRefresh();
   _vjLiveAutoRefreshTimer = setInterval(()=>{
@@ -3028,7 +3017,7 @@ function renderVjLiveData() {
       <div class="search-bar" style="margin-bottom:10px;">
         ${ICONS.search}
         <input id="vjSearchInput" type="text" placeholder="ຄົ້ນຫາ BIGO ID ຫຼື ຊື່ VJ..." value="${escapeHtml(State.searchQuery)}">
-        <button class="btn btn-ghost btn-sm" onclick="fetchVjLiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');" style="flex-shrink:0; padding:6px 10px;">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="_vjLiveCache=null; fetchVjLiveData(State.activeLiveMonth); toast('ກຳລັງ Refresh...','info');" style="flex-shrink:0; padding:6px 10px;">🔄</button>
       </div>
       <div id="vjLiveList">${filtered.length ? filtered.map(vj => vjLiveCardHtml(vj)).join('') : `<div class="empty-state"><p>ບໍ່ພົບ VJ</p></div>`}</div>`;
   }

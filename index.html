@@ -915,6 +915,14 @@ function tickerHtml(){
       <div class="ticker-track"><span>${escapeHtml(State.banners.tickerText)} &nbsp; • &nbsp; ${escapeHtml(State.banners.tickerText)}</span></div>
     </div>`;
 }
+function scrollActiveChipIntoView(){
+  document.querySelectorAll('.chip-row').forEach(row=>{
+    const active = row.querySelector('.chip.active');
+    if(!active) return;
+    const target = active.offsetLeft - (row.clientWidth/2) + (active.clientWidth/2);
+    row.scrollTo({ left: Math.max(0,target), behavior: 'smooth' });
+  });
+}
 
 /* ============================================================================
    TOAST
@@ -1308,6 +1316,7 @@ function afterRenderHook(){
       mobileList.innerHTML = list.length ? list.map(vj => adminVjRowHtml(month, vj)).join('') : `<div class="empty-state" style="padding:24px;"><p>ບໍ່ພົບ VJ</p></div>`;
     });
   }
+  scrollActiveChipIntoView();
 }
 
 /* ============================================================================
@@ -2953,10 +2962,23 @@ function applyPreset(name){
    VIEW: VJ LIVE DATA
 ============================================================================ */
 let _vjLiveCache = null;
+let _vjLiveCacheByMonth = {};   // ★ ໃໝ່: cache ແຍກຕາມແຕ່ລະເດືອນ
 let _vjLiveLoading = false;
 let _vjLiveAutoRefreshTimer = null;
-async function fetchVjLiveData(monthKey) {
+
+async function fetchVjLiveData(monthKey, forceRefresh) {
   if (_vjLiveLoading) return;
+  const cacheKey = monthKey || State.activeLiveMonth || '__latest__';
+
+  // ★ ຖ້າມີ cache ຂອງເດືອນນີ້ຢູ່ແລ້ວ ແລະ ບໍ່ໄດ້ບັງຄັບ refresh → ໃຊ້ທັນທີ ບໍ່ຕ້ອງລໍ backend
+  if (!forceRefresh && _vjLiveCacheByMonth[cacheKey]) {
+    _vjLiveCache = _vjLiveCacheByMonth[cacheKey].list;
+    if (_vjLiveCacheByMonth[cacheKey].months) State.liveMonths = _vjLiveCacheByMonth[cacheKey].months;
+    State.activeLiveMonth = _vjLiveCacheByMonth[cacheKey].month || monthKey;
+    if (State.view === 'livedata') { document.getElementById('main').innerHTML = renderVjLiveData(); afterRenderHook(); }
+    return;
+  }
+
   if (!_vjLiveCache) {
     try { _vjLiveCache = JSON.parse(localStorage.getItem('emo_cache_vjlive') || 'null'); } catch(e){}
   }
@@ -2965,7 +2987,8 @@ async function fetchVjLiveData(monthKey) {
     const res = await gasCall('getVjLiveData', monthKey || State.activeLiveMonth || null);
     if (res && !res.error) {
       _vjLiveCache = Array.isArray(res.list) ? res.list : [];
-       try{ localStorage.setItem('emo_cache_vjlive', JSON.stringify(_vjLiveCache)); }catch(e){}
+      _vjLiveCacheByMonth[cacheKey] = { list: _vjLiveCache, months: res.months, month: res.month }; // ★ ເກັບ cache
+      try{ localStorage.setItem('emo_cache_vjlive', JSON.stringify(_vjLiveCache)); }catch(e){}
       if (Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
       State.activeLiveMonth = res.month || State.activeLiveMonth;
     } else {
@@ -2977,12 +3000,14 @@ async function fetchVjLiveData(monthKey) {
     toast(e.message || 'ໂຫລດ Live Data ບໍ່ສຳເລັດ', 'error');
   }
   _vjLiveLoading = false;
-  if (State.view === 'livedata') {
-    document.getElementById('main').innerHTML = renderVjLiveData();
-    afterRenderHook();
-  }
+  if (State.view === 'livedata') { document.getElementById('main').innerHTML = renderVjLiveData(); afterRenderHook(); }
 }
-function switchLiveMonth(key){ State.activeLiveMonth = key; _vjLiveCache = null; fetchVjLiveData(key); }
+
+function switchLiveMonth(key){
+  State.activeLiveMonth = key;
+  render();              // ★ ໃຫ້ chip ປ່ຽນ active ທັນທີ + ສະແດງ cache/skeleton ທັນທີ
+  fetchVjLiveData(key);  // ຄ່ອຍ sync ຫຼັງບ້ານ (ໃຊ້ cache ຖ້າມີ, ຫຼືດຶງໃໝ່ຖ້າຍັງບໍ່ມີ)
+}
 function startVjLiveAutoRefresh(){
   stopVjLiveAutoRefresh();
   _vjLiveAutoRefreshTimer = setInterval(()=>{
@@ -3017,7 +3042,7 @@ function renderVjLiveData() {
       <div class="search-bar" style="margin-bottom:10px;">
         ${ICONS.search}
         <input id="vjSearchInput" type="text" placeholder="ຄົ້ນຫາ BIGO ID ຫຼື ຊື່ VJ..." value="${escapeHtml(State.searchQuery)}">
-        <button class="btn btn-ghost btn-sm" onclick="_vjLiveCache=null; fetchVjLiveData(State.activeLiveMonth); toast('ກຳລັງ Refresh...','info');" style="flex-shrink:0; padding:6px 10px;">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="fetchVjLiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');" style="flex-shrink:0; padding:6px 10px;">🔄</button>
       </div>
       <div id="vjLiveList">${filtered.length ? filtered.map(vj => vjLiveCardHtml(vj)).join('') : `<div class="empty-state"><p>ບໍ່ພົບ VJ</p></div>`}</div>`;
   }
@@ -3112,9 +3137,22 @@ function vjLiveCardHtml(vj) {
 }
 
 let _newVjActiveCache = null;
+let _newVjActiveCacheByMonth = {};   // ★ cache ແຍກຕາມແຕ່ລະເດືອນ
 let _newVjActiveLoading = false;
-async function fetchNewVjActiveData(monthKey){
+
+async function fetchNewVjActiveData(monthKey, forceRefresh){
   if(_newVjActiveLoading) return;
+  const cacheKey = monthKey || State.activeLiveMonth || '__latest__';
+
+  // ★ ຖ້າມີ cache ຂອງເດືອນນີ້ຢູ່ແລ້ວ ແລະ ບໍ່ໄດ້ບັງຄັບ refresh → ໃຊ້ທັນທີ
+  if(!forceRefresh && _newVjActiveCacheByMonth[cacheKey]){
+    _newVjActiveCache = _newVjActiveCacheByMonth[cacheKey].list;
+    if(_newVjActiveCacheByMonth[cacheKey].months) State.liveMonths = _newVjActiveCacheByMonth[cacheKey].months;
+    State.activeLiveMonth = _newVjActiveCacheByMonth[cacheKey].month || monthKey;
+    if(State.view === 'newvjactive'){ document.getElementById('main').innerHTML = renderNewVjActive(); afterRenderHook(); }
+    return;
+  }
+
   if(!_newVjActiveCache){
     try{ _newVjActiveCache = JSON.parse(localStorage.getItem('emo_cache_newvjactive') || 'null'); }catch(e){}
     if(_newVjActiveCache && State.view === 'newvjactive'){
@@ -3127,6 +3165,7 @@ async function fetchNewVjActiveData(monthKey){
     const res = await gasCall('getNewVjActiveData', monthKey || State.activeLiveMonth || null);
     if(res && !res.error){
       _newVjActiveCache = Array.isArray(res.list) ? res.list : [];
+      _newVjActiveCacheByMonth[cacheKey] = { list: _newVjActiveCache, months: res.months, month: res.month }; // ★ ເກັບ cache
       try{ localStorage.setItem('emo_cache_newvjactive', JSON.stringify(_newVjActiveCache)); }catch(e){}
       if(Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
       State.activeLiveMonth = res.month || State.activeLiveMonth;
@@ -3134,6 +3173,12 @@ async function fetchNewVjActiveData(monthKey){
   }catch(e){ if(!_newVjActiveCache){ toast(e.message || 'ໂຫລດຂໍ້ມູນບໍ່ສຳເລັດ','error'); } }
   _newVjActiveLoading = false;
   if(State.view === 'newvjactive'){ document.getElementById('main').innerHTML = renderNewVjActive(); afterRenderHook(); }
+}
+
+function switchNewVjActiveMonth(key){
+  State.activeLiveMonth = key;
+  render();                      // ★ chip ປ່ຽນ active ທັນທີ + ໂຊວ໌ cache/skeleton ທັນທີ
+  fetchNewVjActiveData(key);     // ຄ່ອຍ sync ຫຼັງບ້ານ
 }
 
 function newVjActiveStatusTableHtml(vj){
@@ -3179,12 +3224,12 @@ function renderNewVjActive(){
       <h1>🌟 ໂບນັດ Active VJ ໃໝ່</h1>
       <p>VJ ໃໝ່ (2 ເດືອນທຳອິດ) — ${list.length} ຄົນ${State.activeLiveMonth?(' · '+escapeHtml((State.liveMonths.find(m=>m.key===State.activeLiveMonth)||{}).label||'')):''}</p>
     </div>
-    ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="State.activeLiveMonth='${m.key}'; _newVjActiveCache=null; fetchNewVjActiveData('${m.key}');">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
+    ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="switchNewVjActiveMonth('${m.key}')">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
     ${State.isAdmin ? `<div class="stat-grid" style="margin-bottom:14px;"><div class="stat-card"><div class="l">VJ ໃໝ່ທັງໝົດ</div><div class="v">${list.length}</div></div><div class="stat-card"><div class="l">ຮອດເງື່ອນໄຂ</div><div class="v mint">${metCount}</div></div><div class="stat-card"><div class="l">Beans ໂບນັດລວມ</div><div class="v gold">${fmtInt(totalBonus)}</div></div></div>` : ''}
     <div class="search-bar" style="margin-bottom:10px;">
       ${ICONS.search}
       <input id="vjSearchInput" type="text" placeholder="ຄົ້ນຫາ Bigo ID ຫຼື ຊື່..." value="${escapeHtml(State.searchQuery)}" oninput="State.searchQuery=this.value; document.getElementById('newVjActiveList').innerHTML = renderNewVjActiveListInner();">
-      <button class="btn btn-ghost btn-sm" onclick="_newVjActiveCache=null; fetchNewVjActiveData(State.activeLiveMonth); toast('ກຳລັງ Refresh...','info');">🔄</button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchNewVjActiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');">🔄</button>
     </div>
     <div id="newVjActiveList">${renderNewVjActiveListInner()}</div>`;
 }
@@ -3221,9 +3266,22 @@ function renderNewVjActiveListInner(){
 }
 
 let _cashBonusCache = null;
+let _cashBonusCacheByMonth = {};   // ★ cache ແຍກຕາມແຕ່ລະເດືອນ
 let _cashBonusLoading = false;
-async function fetchCashBonusData(monthKey){
+
+async function fetchCashBonusData(monthKey, forceRefresh){
   if(_cashBonusLoading) return;
+  const cacheKey = monthKey || State.activeLiveMonth || '__latest__';
+
+  // ★ ຖ້າມີ cache ຂອງເດືອນນີ້ຢູ່ແລ້ວ ແລະ ບໍ່ໄດ້ບັງຄັບ refresh → ໃຊ້ທັນທີ
+  if(!forceRefresh && _cashBonusCacheByMonth[cacheKey]){
+    _cashBonusCache = _cashBonusCacheByMonth[cacheKey].data;
+    if(_cashBonusCache.months) State.liveMonths = _cashBonusCache.months;
+    State.activeLiveMonth = _cashBonusCache.month || monthKey;
+    if(State.view === 'cashbonus'){ document.getElementById('main').innerHTML = renderCashBonus(); afterRenderHook(); }
+    return;
+  }
+
   if(!_cashBonusCache){
     try{ _cashBonusCache = JSON.parse(localStorage.getItem('emo_cache_cashbonus') || 'null'); }catch(e){}
     if(_cashBonusCache && State.view === 'cashbonus'){
@@ -3236,6 +3294,7 @@ async function fetchCashBonusData(monthKey){
     const res = await gasCall('getCashBonusData', monthKey || State.activeLiveMonth || null);
     if(res && !res.error){
       _cashBonusCache = res;
+      _cashBonusCacheByMonth[cacheKey] = { data: res };   // ★ ເກັບ cache
       try{ localStorage.setItem('emo_cache_cashbonus', JSON.stringify(res)); }catch(e){}
       if(Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
       State.activeLiveMonth = res.month || State.activeLiveMonth;
@@ -3243,6 +3302,12 @@ async function fetchCashBonusData(monthKey){
   }catch(e){ if(!_cashBonusCache){ toast(e.message || 'ໂຫລດຂໍ້ມູນບໍ່ສຳເລັດ','error'); } }
   _cashBonusLoading = false;
   if(State.view === 'cashbonus'){ document.getElementById('main').innerHTML = renderCashBonus(); afterRenderHook(); }
+}
+
+function switchCashBonusMonth(key){
+  State.activeLiveMonth = key;
+  render();                    // ★ chip ປ່ຽນ active ທັນທີ + ໂຊວ໌ cache/skeleton ທັນທີ
+  fetchCashBonusData(key);     // ຄ່ອຍ sync ຫຼັງບ້ານ
 }
 function renderCashBonus(){
   if(!_cashBonusCache && !_cashBonusLoading){ fetchCashBonusData(); return skeletonHtml(); }
@@ -3277,7 +3342,7 @@ function renderCashBonus(){
       <h1>💰 ໂບນັດເງິນສົດ VJ</h1>
       <p>ຄິດໄລ່ຈາກຕາຕະລາງ 2026 — ${data.month?escapeHtml(data.month):''}</p>
     </div>
-    ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="State.activeLiveMonth='${m.key}'; _cashBonusCache=null; fetchCashBonusData('${m.key}');">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
+    ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="switchCashBonusMonth('${m.key}')">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
     ${State.isAdmin ? `
     <div class="stat-grid" style="margin-bottom:14px;">
       <div class="stat-card"><div class="l">ໂບນັດ VJ ໃໝ່</div><div class="v gold">${fmtInt(data.totalNew)} ₭</div></div>

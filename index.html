@@ -1242,6 +1242,17 @@ function render(){
     return;
   }
   document.body.classList.remove('pre-login');
+
+  // ★ ເກັບ input ທີ່ກຳລັງພິມຢູ່ໄວ້ກ່ອນ re-render (ປ້ອງກັນພິມແລ້ວຫາຍ)
+  const mainEl0 = document.getElementById('main');
+  const activeEl = document.activeElement;
+  let _preserveId = null, _preserveVal = null, _preserveSel = null;
+  if(activeEl && mainEl0 && mainEl0.contains(activeEl) && (activeEl.tagName==='INPUT' || activeEl.tagName==='TEXTAREA')){
+    _preserveId = activeEl.id;
+    _preserveVal = activeEl.value;
+    _preserveSel = activeEl.selectionStart;
+  }
+
   renderShell();
   const main = document.getElementById('main');
   const titles = {
@@ -1286,6 +1297,16 @@ function render(){
     });
   }
   afterRenderHook();
+
+  // ★ ຄືນຄ່າ input ທີ່ພິມຄ້າງໄວ້ + ໂຟກັດຄືນ
+  if(_preserveId){
+    const el = document.getElementById(_preserveId);
+    if(el){
+      el.value = _preserveVal;
+      el.focus();
+      if(_preserveSel != null) el.setSelectionRange(_preserveSel, _preserveSel);
+    }
+  }
 }
 function skeletonHtml(){
   return `

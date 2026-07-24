@@ -21,7 +21,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 :root{
@@ -205,27 +205,7 @@ input,select,textarea{ font-family:inherit; }
   background:linear-gradient(165deg, var(--ink-3), var(--ink-2));
   border:1px solid var(--line); border-radius:var(--radius-lg);
   padding:18px; box-shadow:var(--shadow-1);
-  position:relative; overflow:hidden;
-  backdrop-filter: blur(10px);
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
-.card::before{
-  content:''; position:absolute; inset:0; border-radius:inherit; padding:1px;
-  background:linear-gradient(135deg, var(--gold) 0%, transparent 30%, transparent 70%, var(--mint) 100%);
-  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite:xor; mask-composite:exclude;
-  opacity:0; transition:opacity .25s;
-}
-.card:hover::before{ opacity:.35; }
-.card:hover{ transform:translateY(-2px); box-shadow:0 8px 28px rgba(245,184,46,0.12); }
-.btn-primary{
-  background:linear-gradient(135deg, var(--gold), #ffdc7a 45%, #c98f1c);
-  background-size:200% 200%;
-  color:#21170a;
-  box-shadow:0 4px 20px rgba(245,184,46,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
-  transition:filter .15s, transform .1s, background-position .4s;
-}
-.btn-primary:hover{ filter:brightness(1.08); background-position:100% 0; }
 .card + .card{ margin-top:14px; }
 .card-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .hero-balance{
@@ -294,6 +274,8 @@ input,select,textarea{ font-family:inherit; }
 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:11px 18px; border-radius:12px; font-weight:700; font-size:14px; border:1px solid transparent; transition:filter .15s, transform .1s; }
 .btn svg{ width:16px; height:16px; flex-shrink:0; }
 .btn:active{ transform:scale(.97); }
+.btn-primary{ background:linear-gradient(145deg, var(--gold), #d99a1f); color:#21170a; box-shadow:0 4px 16px rgba(245,184,46,0.3); }
+.btn-primary:hover{ filter:brightness(1.07); }
 .btn-ghost{ background:var(--ink-3); color:var(--text-hi); border-color:var(--line); }
 .btn-ghost:hover{ background:#1b2944; }
 .btn-danger{ background:rgba(255,107,94,0.12); color:var(--coral); border-color:rgba(255,107,94,0.35); }
@@ -744,9 +726,7 @@ function applyTheme(t) {
     'Poppins':"'Poppins','Noto Sans Lao',sans-serif",
     'Kanit':"'Kanit','Noto Sans Lao',sans-serif",
     'Prompt':"'Prompt','Noto Sans Lao',sans-serif",
-    'Sora':"'Sora','Noto Sans Lao',sans-serif",
-    'Space Grotesk':"'Space Grotesk','Noto Sans Lao',sans-serif",
-    'Manrope':"'Manrope','Noto Sans Lao',sans-serif"
+    'Sora':"'Sora','Noto Sans Lao',sans-serif"
   };
   if(t.fontBody    && fontMap[t.fontBody])    r.setProperty('--f-body',    fontMap[t.fontBody]);
   if(t.fontDisplay && fontMap[t.fontDisplay]) r.setProperty('--f-display', fontMap[t.fontDisplay]);
@@ -1180,12 +1160,8 @@ function sideLinkHtml(n){
 }
 function tabItemHtml(n){
   const active = State.view === n.id ? 'active' : '';
-  const custom = State.theme.navIcons && State.theme.navIcons[n.id];
-  const iconHtml = custom
-    ? `<img src="${escapeHtml(custom)}" style="width:22px;height:22px;object-fit:contain;">`
-    : n.icon;
   return `<button class="tab-item ${active}" onclick="setView('${n.id}')">
-    <span class="tab-emoji-box">${iconHtml}</span>
+    <span class="tab-emoji-box">${n.icon}</span>
     <span>${n.label}</span>
   </button>`;
 }
@@ -1242,17 +1218,6 @@ function render(){
     return;
   }
   document.body.classList.remove('pre-login');
-
-  // ★ ເກັບ input ທີ່ກຳລັງພິມຢູ່ໄວ້ກ່ອນ re-render (ປ້ອງກັນພິມແລ້ວຫາຍ)
-  const mainEl0 = document.getElementById('main');
-  const activeEl = document.activeElement;
-  let _preserveId = null, _preserveVal = null, _preserveSel = null;
-  if(activeEl && mainEl0 && mainEl0.contains(activeEl) && (activeEl.tagName==='INPUT' || activeEl.tagName==='TEXTAREA')){
-    _preserveId = activeEl.id;
-    _preserveVal = activeEl.value;
-    _preserveSel = activeEl.selectionStart;
-  }
-
   renderShell();
   const main = document.getElementById('main');
   const titles = {
@@ -1297,16 +1262,6 @@ function render(){
     });
   }
   afterRenderHook();
-
-  // ★ ຄືນຄ່າ input ທີ່ພິມຄ້າງໄວ້ + ໂຟກັດຄືນ
-  if(_preserveId){
-    const el = document.getElementById(_preserveId);
-    if(el){
-      el.value = _preserveVal;
-      el.focus();
-      if(_preserveSel != null) el.setSelectionRange(_preserveSel, _preserveSel);
-    }
-  }
 }
 function skeletonHtml(){
   return `
@@ -2825,18 +2780,6 @@ function renderAdminSettings(){
       <div class="field"><label>ຊື່ລະບົບ</label><input id="systemName" type="text" value="${escapeHtml(t.systemName||'EMO Agency')}" oninput="document.querySelectorAll('.brand-text b').forEach(el=>el.textContent=this.value)"></div>
       <div class="field"><label>ຄຳໂຄສະນາ / Subtitle</label><input id="systemSub" type="text" value="${escapeHtml(t.systemSub||'Commission & Bonus VJ')}" oninput="document.querySelectorAll('.brand-text span, #topbarSub').forEach(el=>el&&(el.textContent=this.value))"></div>
     </div>
-    <div class="section-label">🧩 ໄອຄອນແຕ່ລະໜ້າ (Tab Bar)</div>
-    <div class="card settings-section">
-      ${USER_NAV.map(n => `
-        <div class="field-row" style="align-items:center;">
-          <div style="width:34px;text-align:center;">${(State.theme.navIcons&&State.theme.navIcons[n.id])?`<img src="${escapeHtml(State.theme.navIcons[n.id])}" style="width:24px;height:24px;object-fit:contain;">`:n.icon}</div>
-          <div class="field" style="flex:1;">
-            <label>${n.label}</label>
-            <input type="text" class="nav-icon-input" data-navid="${n.id}" placeholder="URL ຮູບໄອຄອນ..." value="${escapeHtml((State.theme.navIcons&&State.theme.navIcons[n.id])||'')}">
-          </div>
-        </div>`).join('')}
-      <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="document.querySelectorAll('.nav-icon-input').forEach(i=>i.value='');toast('ລ້າງໄອຄອນທັງໝົດ (ຍັງບໍ່ໄດ້ບັນທຶກ)','info');">🗑️ ລ້າງທັງໝົດ (ໃຊ້ Emoji ເກົ່າ)</button>
-    </div>
     <div class="section-label">🎨 Preset Themes</div>
     <div class="preset-grid">
       <button class="preset-btn" onclick="applyPreset('dark')">🌑 Dark Navy (Default)</button>
@@ -2845,10 +2788,6 @@ function renderAdminSettings(){
       <button class="preset-btn" onclick="applyPreset('ocean')">🌊 Ocean Dark</button>
       <button class="preset-btn" onclick="applyPreset('forest')">🌿 Forest Dark</button>
       <button class="preset-btn" onclick="applyPreset('rose')">🌸 Rose Gold</button>
-      <button class="preset-btn" onclick="applyPreset('neon')">💗 Neon Cyber</button>
-      <button class="preset-btn" onclick="applyPreset('gold24')">🏆 Royal Gold</button>
-      <button class="preset-btn" onclick="applyPreset('chrome')">🔮 Chrome Teal</button>
-      <button class="preset-btn" onclick="applyPreset('emerald')">💚 Emerald Luxe</button>
     </div>
     <div class="section-label">🖌️ ສີ UI ທຸກຢ່າງ</div>
     <div class="card settings-section">
@@ -2864,8 +2803,8 @@ function renderAdminSettings(){
     <div class="section-label">🔤 Font</div>
     <div class="card settings-section">
       <div class="field-row">
-        <div class="field"><label>Body Font</label><select class="font-select" id="fontBody" onchange="previewFont('body',this.value)">${['Inter','Poppins','Kanit','Prompt','Sora','Space Grotesk','Manrope','Noto Sans Lao'].map(f=>`<option value="${f}" ${(t.fontBody||'Inter')===f?'selected':''}>${f}</option>`).join('')}</select></div>
-        <div class="field"><label>Display Font</label><select class="font-select" id="fontDisplay" onchange="previewFont('display',this.value)">${['Sora','Poppins','Kanit','Prompt','Inter','Space Grotesk','Manrope'].map(f=>`<option value="${f}" ${(t.fontDisplay||'Sora')===f?'selected':''}>${f}</option>`).join('')}</select></div>
+        <div class="field"><label>Body Font</label><select class="font-select" id="fontBody" onchange="previewFont('body',this.value)">${['Inter','Poppins','Kanit','Prompt','Sora','Noto Sans Lao'].map(f=>`<option value="${f}" ${(t.fontBody||'Inter')===f?'selected':''}>${f}</option>`).join('')}</select></div>
+        <div class="field"><label>Display Font</label><select class="font-select" id="fontDisplay" onchange="previewFont('display',this.value)">${['Sora','Poppins','Kanit','Prompt','Inter'].map(f=>`<option value="${f}" ${(t.fontDisplay||'Sora')===f?'selected':''}>${f}</option>`).join('')}</select></div>
       </div>
     </div>
     <div class="section-label">📐 Border Radius</div>
@@ -2957,7 +2896,7 @@ function liveColorPreview(key, val) {
   if(cssMap[key]) document.documentElement.style.setProperty(cssMap[key], val);
 }
 function previewFont(type, val){
-  const fontMap = { 'Inter':"'Inter','Noto Sans Lao',sans-serif", 'Poppins':"'Poppins','Noto Sans Lao',sans-serif", 'Kanit':"'Kanit','Noto Sans Lao',sans-serif", 'Prompt':"'Prompt','Noto Sans Lao',sans-serif", 'Sora':"'Sora','Noto Sans Lao',sans-serif", 'Space Grotesk':"'Space Grotesk','Noto Sans Lao',sans-serif", 'Manrope':"'Manrope','Noto Sans Lao',sans-serif" };
+  const fontMap = { 'Inter':"'Inter','Noto Sans Lao',sans-serif", 'Poppins':"'Poppins','Noto Sans Lao',sans-serif", 'Kanit':"'Kanit','Noto Sans Lao',sans-serif", 'Prompt':"'Prompt','Noto Sans Lao',sans-serif", 'Sora':"'Sora','Noto Sans Lao',sans-serif" };
   if(type==='body'    && fontMap[val]) document.documentElement.style.setProperty('--f-body',    fontMap[val]);
   if(type==='display' && fontMap[val]) document.documentElement.style.setProperty('--f-display', fontMap[val]);
 }
@@ -2980,9 +2919,6 @@ async function saveThemeAll(){
   const lbt = document.getElementById('loginButtonTextColor'); if(lbt) newT.loginButtonTextColor = lbt.value;
   const ltc = document.getElementById('loginTitleColor'); if(ltc) newT.loginTitleColor = ltc.value;
   const lsc = document.getElementById('loginSubColor');   if(lsc) newT.loginSubColor = lsc.value;
-  const navIcons = {};
-  document.querySelectorAll('.nav-icon-input').forEach(inp=>{ if(inp.value.trim()) navIcons[inp.dataset.navid] = inp.value.trim(); });
-  newT.navIcons = navIcons;
   applyTheme(newT);
   if(newT.logoUrl){ document.querySelectorAll('.brand-mark,.login-mark').forEach(el=>{ el.innerHTML=`<img src="${newT.logoUrl}" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.parentElement.textContent='${newT.logoText||'E'}'">`; }); }
   try{
@@ -3009,10 +2945,6 @@ function applyPreset(name){
     ocean:  {ink:'#061220',ink2:'#0A1F35',ink3:'#102946',line:'#1B4F72',gold:'#38BDF8',mint:'#34D399',coral:'#FB923C',ice:'#60A5FA',textHi:'#F0F9FF',textMid:'#BAE6FD',textLow:'#7DD3FC',btnText:'#0C1A2B'},
     forest: {ink:'#0A1208',ink2:'#0F1C0D',ink3:'#162614',line:'#2D4A28',gold:'#86EFAC',mint:'#6EE7B7',coral:'#FCA5A5',ice:'#A7F3D0',textHi:'#F0FDF4',textMid:'#BBF7D0',textLow:'#4ADE80',btnText:'#0A1208'},
     rose:   {ink:'#1A0A10',ink2:'#25101A',ink3:'#321524',line:'#5A2840',gold:'#F472B6',mint:'#FB7185',coral:'#FBBF24',ice:'#F9A8D4',textHi:'#FDF2F8',textMid:'#FBCFE8',textLow:'#F9A8D4',btnText:'#1A0A10'},
-    neon:   {ink:'#08060F',ink2:'#0F0B1D',ink3:'#171029',line:'#2B2148',gold:'#FF3EA5',mint:'#00F0FF',coral:'#FF5E5E',ice:'#7B61FF',textHi:'#FDF4FF',textMid:'#D8B4FE',textLow:'#9F7AEA',btnText:'#0A0612'},
-    gold24: {ink:'#0C0A05',ink2:'#171208',ink3:'#231B0D',line:'#4A3C1E',gold:'#FFD65C',mint:'#B8E994',coral:'#FF8A65',ice:'#FFC978',textHi:'#FFF8E1',textMid:'#E8D5A3',textLow:'#A8925C',btnText:'#1A1204'},
-    chrome: {ink:'#0A0E14',ink2:'#101620',ink3:'#182230',line:'#2A3A4E',gold:'#5EEAD4',mint:'#7DD3FC',coral:'#FCA5A5',ice:'#A5F3FC',textHi:'#F0FDFA',textMid:'#99F6E4',textLow:'#5EEAD4',btnText:'#062018'},
-    emerald:{ink:'#04120D',ink2:'#081D15',ink3:'#0F2A1F',line:'#1F4A38',gold:'#FFD166',mint:'#06D6A0',coral:'#EF476F',ice:'#38A3A5',textHi:'#F0FFF4',textMid:'#B9F5D0',textLow:'#6EE7B7',btnText:'#04120D'},
   };
   const p = PRESETS[name];
   if(!p){ toast('ບໍ່ພົບ Preset','error'); return; }

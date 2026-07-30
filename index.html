@@ -92,7 +92,8 @@ input,select,textarea{ font-family:inherit; }
   padding:0 16px;
   background:rgba(11,18,32,0.85);
   backdrop-filter:blur(14px) saturate(140%);
-  border-bottom:1px solid var(--line);
+  border-bottom:1px solid rgba(245,184,46,0.25);   /* ← ຍ້າຍມາໃສ່ນີ້ */
+  box-shadow:0 2px 20px rgba(245,184,46,0.06);      /* ← ຍ້າຍມາໃສ່ນີ້ */
   z-index:40;
 }
 .topbar .brand{ display:flex; align-items:center; gap:10px; }
@@ -118,9 +119,10 @@ input,select,textarea{ font-family:inherit; }
 .tabbar{
   position:fixed; left:0; right:0; bottom:0; height:var(--nav-h);
   display:flex; z-index:40;
-  background:rgba(255,255,255,0.95);
-  backdrop-filter:blur(14px) saturate(140%);
-  border-top:1px solid var(--line);
+  background: linear-gradient(180deg, rgba(22,15,38,0.9), rgba(10,8,18,0.98));
+  backdrop-filter: blur(18px) saturate(160%);
+  border-top:1px solid rgba(255,216,107,0.15);
+  box-shadow: 0 -6px 24px rgba(0,0,0,0.35);
   padding-bottom:env(safe-area-inset-bottom);
 }
 .tab-item{
@@ -142,7 +144,13 @@ input,select,textarea{ font-family:inherit; }
   transform: translateY(-3px);
 }
 .tab-item.active .tab-emoji-box{ transform: scale(1.12); }
-.tab-item.active{ color:var(--gold); }
+.tab-item.active{ color:var(--ink); }
+.tab-item.active .tab-emoji-box{
+  background: linear-gradient(135deg, var(--gold), var(--mint));
+  border-radius:14px; box-shadow:0 4px 14px rgba(245,184,46,0.5);
+  padding:2px;
+}
+.tab-item.active span{ color:var(--gold); font-weight:800; }
 .tab-item.active svg{ transform:translateY(-2px); }
 .sidebar{
   width:240px; flex-shrink:0;
@@ -202,9 +210,14 @@ input,select,textarea{ font-family:inherit; }
 .page-head p{ margin:0; color:var(--text-low); font-size:13.5px; }
 .eyebrow{ font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin:0 0 6px; }
 .card{
-  background:linear-gradient(165deg, var(--ink-3), var(--ink-2));
+  background: linear-gradient(155deg, var(--ink-3) 0%, var(--ink-2) 60%, rgba(255,216,107,0.05) 100%);
   border:1px solid var(--line); border-radius:var(--radius-lg);
-  padding:18px; box-shadow:var(--shadow-1);
+  padding:18px; box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255,255,255,0.04);
+  position:relative; overflow:hidden;
+}
+.card::before{
+  content:''; position:absolute; top:-40%; right:-20%; width:60%; height:140%;
+  background:radial-gradient(circle, var(--gold) 0%, transparent 60%); opacity:0.05; pointer-events:none;
 }
 .card + .card{ margin-top:14px; }
 .card-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -246,7 +259,12 @@ input,select,textarea{ font-family:inherit; }
   margin:8px 0 0;
   flex:1;
 }
-.stat-card{ background:var(--ink-2); border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 14px; }
+.stat-card{
+  background: linear-gradient(160deg, var(--ink-2), var(--ink-3));
+  border:1px solid var(--line); border-radius:var(--radius-md); padding:14px;
+  transition:transform .2s; 
+}
+.stat-card:hover{ transform:translateY(-3px); border-color:rgba(245,184,46,0.4); }
 .stat-card .l{ font-size:11.5px; color:var(--text-low); margin-bottom:6px; font-weight:600; }
 .stat-card .v{ font-family:var(--f-mono); font-size:19px; font-weight:700; }
 .stat-card .v.mint{ color:var(--mint); } .stat-card .v.gold{ color:var(--gold); }
@@ -2788,6 +2806,8 @@ function renderAdminSettings(){
       <button class="preset-btn" onclick="applyPreset('ocean')">🌊 Ocean Dark</button>
       <button class="preset-btn" onclick="applyPreset('forest')">🌿 Forest Dark</button>
       <button class="preset-btn" onclick="applyPreset('rose')">🌸 Rose Gold</button>
+      <button class="preset-btn" onclick="applyPreset('luxuryGold')">👑 Luxury Gold</button>
+      <button class="preset-btn" onclick="applyPreset('neonCyber')">⚡ Neon Cyber</button>
     </div>
     <div class="section-label">🖌️ ສີ UI ທຸກຢ່າງ</div>
     <div class="card settings-section">
@@ -2945,6 +2965,8 @@ function applyPreset(name){
     ocean:  {ink:'#061220',ink2:'#0A1F35',ink3:'#102946',line:'#1B4F72',gold:'#38BDF8',mint:'#34D399',coral:'#FB923C',ice:'#60A5FA',textHi:'#F0F9FF',textMid:'#BAE6FD',textLow:'#7DD3FC',btnText:'#0C1A2B'},
     forest: {ink:'#0A1208',ink2:'#0F1C0D',ink3:'#162614',line:'#2D4A28',gold:'#86EFAC',mint:'#6EE7B7',coral:'#FCA5A5',ice:'#A7F3D0',textHi:'#F0FDF4',textMid:'#BBF7D0',textLow:'#4ADE80',btnText:'#0A1208'},
     rose:   {ink:'#1A0A10',ink2:'#25101A',ink3:'#321524',line:'#5A2840',gold:'#F472B6',mint:'#FB7185',coral:'#FBBF24',ice:'#F9A8D4',textHi:'#FDF2F8',textMid:'#FBCFE8',textLow:'#F9A8D4',btnText:'#1A0A10'},
+    luxuryGold: {ink:'#0A0812',ink2:'#160F26',ink3:'#221836',line:'#3A2A5C',gold:'#FFD86B',mint:'#3DF0C4',coral:'#FF6FA3',ice:'#7DD3FF',textHi:'#FFF7E8',textMid:'#D8C7F5',textLow:'#9E86C9',btnText:'#1A0B0B'},
+    neonCyber: {ink:'#05060F',ink2:'#0B0E22',ink3:'#131836',line:'#2A3268',gold:'#00F0FF',mint:'#39FF88',coral:'#FF3D7F',ice:'#8B5CFF',textHi:'#EAF6FF',textMid:'#9FD7FF',textLow:'#5C7FB0',btnText:'#04121A'},
   };
   const p = PRESETS[name];
   if(!p){ toast('ບໍ່ພົບ Preset','error'); return; }

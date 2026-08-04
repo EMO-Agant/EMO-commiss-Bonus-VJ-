@@ -1459,7 +1459,7 @@ function renderHome(){
   let allUSD=0, allVj=0, allBeans=0;
   months.forEach(m=>{ const ss = State.monthsData[m].summary; if(ss){ allUSD+=Number(ss.totalUSD)||0; allBeans+=Number(ss.beans)||0; } });
   allVj = new Set(months.flatMap(m=>(State.monthsData[m].vjList||[]).map(v=>v.bigoId))).size;
-  const top3 = [...(latest.vjList||[])].sort((a,b)=>(Number(b.bonusVjUSD)||0)-(Number(a.bonusVjUSD)||0)).slice(0,3);
+  const top3 = [...(latest.vjList||[])].sort((a,b)=>(Number(b.bonusBeansTotal)||0)-(Number(a.bonusBeansTotal)||0)).slice(0,3);
 
   return `
     ${bannerSliderHtml()}
@@ -1854,7 +1854,7 @@ function renderLeaderboard(){
   if(!State.months.length) return emptyStateHtml('inbox','ຍັງບໍ່ມີຂໍ້ມູນ','Admin ຍັງບໍ່ໄດ້ເພີ່ມຂໍ້ມູນເດືອນໃດເລີຍ');
   const month = State.activeMonth || State.months[State.months.length-1];
   const data = State.monthsData[month];
-  const list = [...(data.vjList||[])].sort((a,b)=>(Number(b.bonusVjUSD)||0)-(Number(a.bonusVjUSD)||0));
+  const list = [...(data.vjList||[])].sort((a,b)=>(Number(b.bonusBeansTotal)||0)-(Number(a.bonusBeansTotal)||0));
   return `
     <div class="page-head fade-in">
       <p class="eyebrow">ອັນດັບ VJ</p>

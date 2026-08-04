@@ -656,6 +656,7 @@ const State = {
     loginBg1:'#182441', loginBg2:'#0B1220', loginGlow:'#F5B82E',
     loginAccent:'#F5B82E', loginAccentText:'#21170a',
     loginTitleColor:'#F5B82E', loginSubColor:'rgba(255,255,255,0.72)',
+    bgMode:'light',
     emoIconFound:'https://i.postimg.cc/3R0PMmV8/ນ-ອງ-EMO-i-CON.png',
     emoIconNotFound:'https://i.postimg.cc/3R0PMmV8/ນ-ອງ-EMO-i-CON.png'
   },
@@ -696,6 +697,7 @@ function tierBadgeHtml(tier){
 }
 function applyTheme(t) {
   const r = document.documentElement.style;
+  if (t.bgMode) document.body.classList.toggle('theme-light', t.bgMode === 'light');
   if(t.ink)      r.setProperty('--ink',      t.ink);
   if(t.ink2)     r.setProperty('--ink-2',    t.ink2);
   if(t.ink3)     r.setProperty('--ink-3',    t.ink3);
@@ -2045,7 +2047,7 @@ function monthlyIncomeExpenseChartHtml(){
 
   return `
     <div class="card" style="margin-top:10px; padding:20px 16px 12px;">
-      <div style="font-weight:700; font-size:14.5px; margin-bottom:4px;">📈 ລາຍຮັບ vs ລາຍຈ່າຍ (ໂບນັດ) — ລາຍເດືອນ</div>
+      <div style="font-weight:700; font-size:14.5px; margin-bottom:4px;">📈 ລາຍຮັບ ເງິນປັນຜົນ Bigo  — ລາຍເດືອນ</div>
       <div style="display:flex; align-items:center; gap:16px; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-mid);"><span style="width:10px;height:10px;border-radius:3px;background:${COL_INCOME};display:inline-block;"></span> ລາຍຮັບ</div>
       </div>
@@ -2858,6 +2860,12 @@ function renderAdminSettings(){
       <div class="field"><label>ຊື່ລະບົບ</label><input id="systemName" type="text" value="${escapeHtml(t.systemName||'EMO Agency')}" oninput="document.querySelectorAll('.brand-text b').forEach(el=>el.textContent=this.value)"></div>
       <div class="field"><label>ຄຳໂຄສະນາ / Subtitle</label><input id="systemSub" type="text" value="${escapeHtml(t.systemSub||'Commission & Bonus VJ')}" oninput="document.querySelectorAll('.brand-text span, #topbarSub').forEach(el=>el&&(el.textContent=this.value))"></div>
     </div>
+    <div class="section-label">🌗 ໂໝດພື້ນຫຼັງລະບົບ</div>
+    <div class="card settings-section" style="display:flex; gap:10px;">
+      <button class="btn ${(t.bgMode||'light')==='light'?'btn-primary':'btn-ghost'}" style="flex:1;" onclick="setBgMode('light')">☀️ ໂໝດແຈ້ງ (ພື້ນຂາວ)</button>
+      <button class="btn ${(t.bgMode||'light')==='dark'?'btn-primary':'btn-ghost'}" style="flex:1;" onclick="setBgMode('dark')">🌙 ໂໝດມືດ (ພື້ນດຳ)</button>
+    </div>
+
     <div class="section-label">🎨 Preset Themes</div>
     <div class="preset-grid">
       <button class="preset-btn" onclick="applyPreset('dark')">🌑 Dark Navy (Default)</button>
@@ -3017,6 +3025,16 @@ async function resetTheme(){
   toast('Reset Theme ແລ້ວ','success');
   setView('admin-settings');
 }
+async function setBgMode(mode){
+  const newT = Object.assign({}, State.theme, { bgMode: mode });
+  applyTheme(newT);
+  try{
+    await gasCall('saveThemeSettings', State.adminPassword, newT);
+    toast('ປ່ຽນໂໝດພື້ນຫຼັງສຳເລັດ','success');
+    setView('admin-settings');
+  }catch(e){ toast(e.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+
 function applyPreset(name){
   const PRESETS = {
     dark:   {ink:'#0B1220',ink2:'#101A2E',ink3:'#16223B',line:'#233153',gold:'#F5B82E',mint:'#2DD4A8',coral:'#FF6B5E',ice:'#6FB7FF',textHi:'#F4F2ED',textMid:'#B8C0D6',textLow:'#71799A',btnText:'#21170a'},

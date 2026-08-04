@@ -2025,11 +2025,10 @@ function monthlyIncomeExpenseChartHtml(){
   const data = months.map(m=>{
     const s = State.monthsData[m].summary || {};
     const income = Number(s.totalUSD)||0;
-    const expense = (Number(s.basicSharingUSD)||0) + (Number(s.vjGrowthBonusUSD)||0) + (Number(s.newVjReferralBonusUSD)||0);
-    return { label: State.monthsData[m].label, income, expense };
+    return { label: State.monthsData[m].label, income };
   });
 
-  const maxVal = Math.max(1, ...data.flatMap(d=>[d.income, d.expense]));
+  const maxVal = Math.max(1, ...data.map(d=>d.income));
   function niceStep(max){
     const rough = max/5;
     const mag = Math.pow(10, Math.floor(Math.log10(rough||1)));
@@ -2049,7 +2048,6 @@ function monthlyIncomeExpenseChartHtml(){
       <div style="font-weight:700; font-size:14.5px; margin-bottom:4px;">📈 ລາຍຮັບ vs ລາຍຈ່າຍ (ໂບນັດ) — ລາຍເດືອນ</div>
       <div style="display:flex; align-items:center; gap:16px; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-mid);"><span style="width:10px;height:10px;border-radius:3px;background:${COL_INCOME};display:inline-block;"></span> ລາຍຮັບ</div>
-        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-mid);"><span style="width:10px;height:10px;border-radius:3px;background:${COL_EXPENSE};display:inline-block;"></span> ລາຍຈ່າຍ (ໂບນັດ)</div>
       </div>
       <div style="position:relative; height:260px; padding-left:52px;">
         <div style="position:absolute; left:0; top:0; bottom:24px; width:48px; display:flex; flex-direction:column;">
@@ -2060,11 +2058,9 @@ function monthlyIncomeExpenseChartHtml(){
           <div style="position:absolute; inset:0; display:flex; align-items:flex-end; gap:${gap};">
             ${data.map(d=>{
               const incPct = (d.income/gridMax*100).toFixed(2);
-              const expPct = (d.expense/gridMax*100).toFixed(2);
               return `
                 <div style="flex:1; display:flex; align-items:flex-end; justify-content:center; gap:4px; height:100%;">
-                  <div title="ລາຍຮັບ $${fmtMoney(d.income)}" style="width:38%; max-width:22px; height:${incPct}%; background:${COL_INCOME}; border-radius:4px 4px 0 0; transition:height .4s;"></div>
-                  <div title="ລາຍຈ່າຍ $${fmtMoney(d.expense)}" style="width:38%; max-width:22px; height:${expPct}%; background:${COL_EXPENSE}; border-radius:4px 4px 0 0; transition:height .4s;"></div>
+                  <div title="ລາຍຮັບ $${fmtMoney(d.income)}" style="width:45%; max-width:34px; height:${incPct}%; background:${COL_INCOME}; border-radius:4px 4px 0 0; transition:height .4s;"></div>
                 </div>`;
             }).join('')}
           </div>

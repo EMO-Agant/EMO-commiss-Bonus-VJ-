@@ -2014,6 +2014,68 @@ function submitAdminLogin(){
 /* ============================================================================
    VIEW: ADMIN DASHBOARD
 ============================================================================ */
+const BAR_PALETTE = ['#F5B82E','#6FB7FF','#2DD4A8','#FF6B5E','#C084FC','#FBBF24','#34D399','#F472B6'];
+
+function monthlyIncomeExpenseChartHtml(){
+  const months = State.months;
+  if(!months.length) return '';
+  const COL_INCOME = '#7DDFC0';   // ລາຍຮັບ = ສີມິນ
+  const COL_EXPENSE = '#F49AC2';  // ລາຍຈ່າຍ = ສີບົວ
+
+  const data = months.map(m=>{
+    const s = State.monthsData[m].summary || {};
+    const income = Number(s.totalUSD)||0;
+    const expense = (Number(s.basicSharingUSD)||0) + (Number(s.vjGrowthBonusUSD)||0) + (Number(s.newVjReferralBonusUSD)||0);
+    return { label: State.monthsData[m].label, income, expense };
+  });
+
+  const maxVal = Math.max(1, ...data.flatMap(d=>[d.income, d.expense]));
+  function niceStep(max){
+    const rough = max/5;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough||1)));
+    const norm = rough/mag;
+    let step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+    return step*mag;
+  }
+  const step = niceStep(maxVal);
+  const gridMax = Math.ceil(maxVal/step)*step || 1;
+  const gridLines = [];
+  for(let v=0; v<=gridMax; v+=step) gridLines.push(v);
+  gridLines.reverse();
+  const gap = data.length > 8 ? '6px' : '14px';
+
+  return `
+    <div class="card" style="margin-top:10px; padding:20px 16px 12px;">
+      <div style="font-weight:700; font-size:14.5px; margin-bottom:4px;">📈 ລາຍຮັບ vs ລາຍຈ່າຍ (ໂບນັດ) — ລາຍເດືອນ</div>
+      <div style="display:flex; align-items:center; gap:16px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-mid);"><span style="width:10px;height:10px;border-radius:3px;background:${COL_INCOME};display:inline-block;"></span> ລາຍຮັບ</div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-mid);"><span style="width:10px;height:10px;border-radius:3px;background:${COL_EXPENSE};display:inline-block;"></span> ລາຍຈ່າຍ (ໂບນັດ)</div>
+      </div>
+      <div style="position:relative; height:260px; padding-left:52px;">
+        <div style="position:absolute; left:0; top:0; bottom:24px; width:48px; display:flex; flex-direction:column;">
+          ${gridLines.map(v=>`<div style="flex:1; font-size:10.5px; color:var(--text-low); text-align:right; padding-right:8px; transform:translateY(-6px);">${fmtInt(v)}</div>`).join('')}
+        </div>
+        <div style="position:absolute; left:52px; right:0; top:0; bottom:24px;">
+          ${gridLines.map((v,i)=>`<div style="position:absolute; left:0; right:0; top:${(i/(gridLines.length-1))*100}%; border-top:1px dashed var(--line);"></div>`).join('')}
+          <div style="position:absolute; inset:0; display:flex; align-items:flex-end; gap:${gap};">
+            ${data.map(d=>{
+              const incPct = (d.income/gridMax*100).toFixed(2);
+              const expPct = (d.expense/gridMax*100).toFixed(2);
+              return `
+                <div style="flex:1; display:flex; align-items:flex-end; justify-content:center; gap:4px; height:100%;">
+                  <div title="ລາຍຮັບ $${fmtMoney(d.income)}" style="width:38%; max-width:22px; height:${incPct}%; background:${COL_INCOME}; border-radius:4px 4px 0 0; transition:height .4s;"></div>
+                  <div title="ລາຍຈ່າຍ $${fmtMoney(d.expense)}" style="width:38%; max-width:22px; height:${expPct}%; background:${COL_EXPENSE}; border-radius:4px 4px 0 0; transition:height .4s;"></div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+        <div style="position:absolute; left:52px; right:0; bottom:0; height:24px; display:flex; gap:${gap};">
+          ${data.map(d=>`<div style="flex:1; text-align:center; font-size:10px; color:var(--text-low); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(d.label.split(' ')[0])}</div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderAdminDashboard(){
   const months = State.months;
   let allUSD=0, allBeans=0, allVjSet=new Set(), allNewVj=0;
@@ -2035,22 +2097,24 @@ function renderAdminDashboard(){
       <div class="stat-card"><div class="l">VJ ທັງໝົດ (unique)</div><div class="v">${fmtInt(allVjSet.size)}</div></div>
       <div class="stat-card"><div class="l">VJ ໃໝ່ສະສົມ</div><div class="v mint">+${fmtInt(allNewVj)}</div></div>
     </div>
+    ${monthlyIncomeExpenseChartHtml()}
     <div class="flex-between" style="margin-top:24px;">
       <h3 class="display" style="font-size:16px; margin:0;">ລາຍຮັບແຍກລາຍເດືອນ</h3>
       <button class="btn btn-primary btn-sm" onclick="setView('admin-months')">${ICONS.plus} ເພີ່ມເດືອນໃໝ່</button>
     </div>
     <div class="card" style="margin-top:10px;">
-      ${months.length ? months.map(m=>{
+      ${months.length ? months.map((m,idx)=>{
         const s = State.monthsData[m].summary||{};
         const pct = Math.round((Number(s.totalUSD)||0)/maxUSD*100);
+        const color = BAR_PALETTE[idx % BAR_PALETTE.length];
         return `
           <div style="margin-bottom:14px;">
             <div class="flex-between" style="margin-bottom:6px; font-size:13px;">
               <span style="font-weight:600;">${escapeHtml(State.monthsData[m].label)}</span>
-              <span class="mono text-gold" style="font-weight:700;">$${fmtMoney(s.totalUSD)}</span>
+              <span class="mono" style="font-weight:700; color:${color};">$${fmtMoney(s.totalUSD)}</span>
             </div>
             <div style="height:8px; background:var(--ink); border-radius:5px; overflow:hidden;">
-              <div style="height:100%; width:${pct}%; background:linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius:5px;"></div>
+              <div style="height:100%; width:${pct}%; background:${color}; border-radius:5px; box-shadow:0 0 8px ${color}55;"></div>
             </div>
           </div>`;
       }).join('') : `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີຂໍ້ມູນເດືອນ</p></div>`}

@@ -1747,25 +1747,9 @@ async function sendEmoQuickQuestion(q){
 
 async function saveEmoIcons(){
   const foundUrl = document.getElementById('emoIconFoundInput').value.trim();
-  <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
-    📷 ອັບໂຫລດຈາກເຄື່ອງ
-    <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'TARGET_ID')">
-  </label>
   const notFoundUrl = document.getElementById('emoIconNotFoundInput').value.trim();
-  <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
-    📷 ອັບໂຫລດຈາກເຄື່ອງ
-    <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'TARGET_ID')">
-  </label>
   const headerUrl = document.getElementById('emoHeaderIconInput').value.trim();
-  <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
-    📷 ອັບໂຫລດຈາກເຄື່ອງ
-    <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'TARGET_ID')">
-  </label>
   const welcomeUrl = document.getElementById('emoWelcomeIconInput').value.trim();
-  <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
-    📷 ອັບໂຫລດຈາກເຄື່ອງ
-    <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'TARGET_ID')">
-  </label>
   const newT = Object.assign({}, State.theme, {
     emoIconFound: foundUrl,
     emoIconNotFound: notFoundUrl,
@@ -2697,6 +2681,10 @@ function renderAdminEmoKb(){
         <div class="field">
           <label>👨 ຮູບເມື່ອຕອບຖືກ / ພົບຂໍ້ມູນ</label>
           <input id="emoIconFoundInput" type="text" value="${escapeHtml(State.theme.emoIconFound||'')}" placeholder="https://...">
+          <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+            📷 ອັບໂຫລດຈາກເຄື່ອງ
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'emoIconFoundInput')">
+          </label>
           <img src="${escapeHtml(getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
         </div>
         <div class="field">

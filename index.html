@@ -688,6 +688,27 @@ const State = {
 function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function fmtInt(n){ return (Number(n)||0).toLocaleString('en-US'); }
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toDriveDirectUrl(url){
+  if(!url) return url;
+  url = String(url).trim();
+  if(!/drive\.google\.com/.test(url)) return url; // ບໍ່ແມ່ນລິ້ງ Drive ບໍ່ຕ້ອງແປງ
+  let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);      // /file/d/ID/view
+  if(!m) m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);        // ?id=ID ຫຼື uc?id=ID
+  if(m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000';
+  return url;
+}
+
+// ແປງລິ້ງ Drive ອັດຕະໂນມັດ ເມື່ອ admin ອອກຈາກຊ່ອງ (blur) + ອັບເດດ preview ຮູບ
+function handlePhotoUrlBlur(el, previewImgId){
+  const v = toDriveDirectUrl(el.value.trim());
+  el.value = v;
+  const img = document.getElementById(previewImgId);
+  if(img){
+    if(v){ img.src = v; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
+  }
+}
+
 function initials(name){ name = String(name||'?').replace(/^_/,''); return name.slice(0,2).toUpperCase(); }
 function tierBadgeHtml(tier){
   tier = (tier||'-').trim();
@@ -696,6 +717,9 @@ function tierBadgeHtml(tier){
   return `<span class="tier ${cls}"><span class="gem"></span>${escapeHtml(tier)}</span>`;
 }
 function applyTheme(t) {
+  ['heroBgImage','loginBgImage','logoUrl','emoIconFound','emoIconNotFound','emoHeaderIcon','emoWelcomeIcon'].forEach(k=>{
+    if(t[k]) t[k] = toDriveDirectUrl(t[k]);
+  });
   const r = document.documentElement.style;
   if (t.bgMode) document.body.classList.toggle('theme-light', t.bgMode === 'light');
   if(t.ink)      r.setProperty('--ink',      t.ink);
@@ -815,6 +839,7 @@ async function gasCall(fnName, ...args){
     'adminLoginV2','adminSaveAdminAccount','adminDeleteAdminAccount',
     'adminSavePkFamilyTeams','adminSavePkFamilyRound','adminSetPkFamilyWinner','adminResetPkFamily','adminSavePkFamilyPool','adminSetPkFamilyMatchTime','adminSetPkFamilyScore',
     'adminUploadPhotoToDrive',
+    'adminChangeMasterPassword',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -995,7 +1020,7 @@ function playLoginSound(){
   }catch(e){}
 }
 
-async function uploadPhotoToDrive(fileInputEl, targetInputId){
+async function uploadPhotoToDrive(fileInputEl, targetInputId, previewImgId){
   const file = fileInputEl.files[0];
   if(!file) return;
   if(!file.type.startsWith('image/')){ toast('ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ','error'); return; }
@@ -1011,6 +1036,10 @@ async function uploadPhotoToDrive(fileInputEl, targetInputId){
         target.value = res.url;
         target.dispatchEvent(new Event('input'));
         target.dispatchEvent(new Event('change'));
+      }
+      if(previewImgId){
+        const img = document.getElementById(previewImgId);
+        if(img){ img.src = res.url; img.style.display = 'block'; }
       }
       toast('ອັບໂຫລດຮູບສຳເລັດ ✓','success');
     }catch(err){
@@ -1143,7 +1172,7 @@ async function refreshData(showToast){
         var parts = (d.month||'').split('-');
         d.label = parts.length===2 ? LAO_M[parseInt(parts[1],10)]+' '+parts[0] : d.month;
       }
-      if(d.vjList) d.vjList.forEach(vj => { vj.photoUrl = vj.photoUrl || ''; });
+      if(d.vjList) d.vjList.forEach(vj => { vj.photoUrl = toDriveDirectUrl(vj.photoUrl || ''); });
       State.monthsData[d.month] = d;
     });
     if(!State.activeMonth || !State.months.includes(State.activeMonth)){
@@ -1421,7 +1450,7 @@ async function bootApp(){
               var parts = (d.month||'').split('-');
               d.label = parts.length===2 ? LAO_M[parseInt(parts[1],10)]+' '+parts[0] : d.month;
             }
-            if(d.vjList) d.vjList.forEach(vj => { vj.photoUrl = vj.photoUrl || ''; });
+            if(d.vjList) d.vjList.forEach(vj => { vj.photoUrl = toDriveDirectUrl(vj.photoUrl || ''); });
             State.monthsData[d.month] = d;
           });
           State.activeMonth = State.months[State.months.length - 1] || null;
@@ -1435,9 +1464,9 @@ async function bootApp(){
       }).catch(err=>{ console.error('getAllData failed:', err); toast(err.message,'error'); }),
 
       gasCall('getThemeSettings').then(t => { if(t) applyTheme(t); }).catch(()=>{}),
-      gasCall('getBannersData').then(b => { if(b){ State.banners = b; startBannerAutoplay(); try{ localStorage.setItem('emo_cache_banners', JSON.stringify(b)); }catch(e){} } }).catch(()=>{}),
-      gasCall('getVjPhotos').then(m => { if(m) State.vjPhotos = m; }).catch(()=>{}),
-      gasCall('getSignupPhotos').then(m => { if(m) State.signupPhotos = m; }).catch(()=>{}),
+      gasCall('getBannersData').then(b => { if(b){ (b.banners||[]).forEach(x=>x.imageUrl=toDriveDirectUrl(x.imageUrl)); State.banners = b; startBannerAutoplay(); try{ localStorage.setItem('emo_cache_banners', JSON.stringify(b)); }catch(e){} } }).catch(()=>{}),
+      gasCall('getVjPhotos').then(m => { if(m){ const n={}; Object.keys(m).forEach(k=>n[k]=toDriveDirectUrl(m[k])); State.vjPhotos = n; } }).catch(()=>{}),
+      gasCall('getSignupPhotos').then(m => { if(m){ const n={}; Object.keys(m).forEach(k=>n[k]=toDriveDirectUrl(m[k])); State.signupPhotos = n; } }).catch(()=>{}),
       gasCall('getVjLiveData', null).then(res => {
         if (res && !res.error) {
           _vjLiveCache = res.list; State.liveMonths = res.months; State.activeLiveMonth = res.month;
@@ -1716,7 +1745,7 @@ function emoMessageHtml(m){
     <div style="max-width:78%; display:flex; flex-direction:column; gap:8px;">
       <div style="padding:10px 14px; border-radius:16px; font-size:13.5px; line-height:1.5; white-space:pre-wrap;
         background:${isUser?'var(--gold)':'var(--ink-3)'}; color:${isUser?'#21170a':'var(--text-hi)'};">${escapeHtml(m.content)}</div>
-      ${imgs.length ? `<div style="display:flex; gap:6px; flex-wrap:wrap;">${imgs.map(u=>`<img src="${escapeHtml(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer;" onclick="openImageLightbox('${escapeHtml(u)}')" onerror="this.style.display='none'">`).join('')}</div>` : ''}
+      ${imgs.length ? `<div style="display:flex; gap:6px; flex-wrap:wrap;">${imgs.map(u=>`<img src="${escapeHtml(toDriveDirectUrl(u))}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer;" onclick="openImageLightbox('${escapeHtml(u)}')" onerror="this.style.display='none'">`).join('')}</div>` : ''}
     </div>
   </div>`;
 }
@@ -2384,13 +2413,13 @@ function openVjFormModal(month, vj){
       <div class="field"><label>Remark</label><input data-key="remark" type="text" value="${escapeHtml(f('remark'))}"></div>
       <div class="field">
         <label>📸 Photo URL (ຮູບ VJ ສຳລັບ Podium)</label>
-        <input data-key="photoUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(State.vjPhotos[String(f('bigoId')).trim().toLowerCase()] || '')}">
-        <p class="field-hint">Google Drive: Share → Copy link → ປ່ຽນ /file/d/ID/view → /uc?id=ID &nbsp;|&nbsp; ຫຼືໃຊ້ link ຮູບໂດຍກົງ</p>
+        <input id="vjPhotoUrlInput" data-key="photoUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(State.vjPhotos[String(f('bigoId')).trim().toLowerCase()] || '')}" onblur="handlePhotoUrlBlur(this, 'vjPhotoPreview')">
+        <p class="field-hint">Google Drive: Share → Copy link → ປ່ຽນ /file/d/ID/view → /uc?id=ID &nbsp;|&nbsp; ລິ້ງ Drive ຈະຖືກແປງອັດຕະໂນມັດເມື່ອອອກຈາກຊ່ອງນີ້</p>
         <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
           📷 ອັບໂຫລດຈາກເຄື່ອງ
-          <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'TARGET_ID')">
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'vjPhotoUrlInput', 'vjPhotoPreview')">
         </label>
-        ${f('photoUrl') ? `<img src="${escapeHtml(f('photoUrl'))}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-top:8px;border:2px solid var(--gold);" onerror="this.style.display='none'">` : ''}
+        <img id="vjPhotoPreview" src="${escapeHtml(f('photoUrl'))}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-top:8px;border:2px solid var(--gold); display:${f('photoUrl')?'block':'none'};" onerror="this.style.display='none'">
       </div>
     </form>
     <div class="modal-actions">
@@ -2680,29 +2709,41 @@ function renderAdminEmoKb(){
       <div class="field-row">
         <div class="field">
           <label>👨 ຮູບເມື່ອຕອບຖືກ / ພົບຂໍ້ມູນ</label>
-          <input id="emoIconFoundInput" type="text" value="${escapeHtml(State.theme.emoIconFound||'')}" placeholder="https://...">
+          <input id="emoIconFoundInput" type="text" value="${escapeHtml(State.theme.emoIconFound||'')}" placeholder="https://..." onblur="handlePhotoUrlBlur(this, 'emoIconFoundPreview')">
           <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
             📷 ອັບໂຫລດຈາກເຄື່ອງ
-            <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'emoIconFoundInput')">
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'emoIconFoundInput', 'emoIconFoundPreview')">
           </label>
-          <img src="${escapeHtml(getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
+          <img id="emoIconFoundPreview" src="${escapeHtml(getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
         </div>
         <div class="field">
           <label>👩 ຮູບເມື່ອບໍ່ພົບຂໍ້ມູນ</label>
-          <input id="emoIconNotFoundInput" type="text" value="${escapeHtml(State.theme.emoIconNotFound||'')}" placeholder="https://...">
-          <img src="${escapeHtml(getEmoIconUrl('notfound'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
+          <input id="emoIconNotFoundInput" type="text" value="${escapeHtml(State.theme.emoIconNotFound||'')}" placeholder="https://..." onblur="handlePhotoUrlBlur(this, 'emoIconNotFoundPreview')">
+          <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+            📷 ອັບໂຫລດຈາກເຄື່ອງ
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'emoIconNotFoundInput', 'emoIconNotFoundPreview')">
+          </label>
+          <img id="emoIconNotFoundPreview" src="${escapeHtml(getEmoIconUrl('notfound'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>🟦 ຮູບຫົວຂໍ້ໜ້າ (ກ່ອງເທິງ)</label>
-          <input id="emoHeaderIconInput" type="text" value="${escapeHtml(State.theme.emoHeaderIcon||'')}" placeholder="https://...">
-          <img src="${escapeHtml(State.theme.emoHeaderIcon || getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
+          <input id="emoHeaderIconInput" type="text" value="${escapeHtml(State.theme.emoHeaderIcon||'')}" placeholder="https://..." onblur="handlePhotoUrlBlur(this, 'emoHeaderIconPreview')">
+          <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+            📷 ອັບໂຫລດຈາກເຄື່ອງ
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'emoHeaderIconInput', 'emoHeaderIconPreview')">
+          </label>
+          <img id="emoHeaderIconPreview" src="${escapeHtml(State.theme.emoHeaderIcon || getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
         </div>
         <div class="field">
           <label>🟪 ຮູບຂໍ້ຄວາມທັກທາຍ (ກ່ອງລຸ່ມ)</label>
-          <input id="emoWelcomeIconInput" type="text" value="${escapeHtml(State.theme.emoWelcomeIcon||'')}" placeholder="https://...">
-          <img src="${escapeHtml(State.theme.emoWelcomeIcon || getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
+          <input id="emoWelcomeIconInput" type="text" value="${escapeHtml(State.theme.emoWelcomeIcon||'')}" placeholder="https://..." onblur="handlePhotoUrlBlur(this, 'emoWelcomeIconPreview')">
+          <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+            📷 ອັບໂຫລດຈາກເຄື່ອງ
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'emoWelcomeIconInput', 'emoWelcomeIconPreview')">
+          </label>
+          <img id="emoWelcomeIconPreview" src="${escapeHtml(State.theme.emoWelcomeIcon || getEmoIconUrl('found'))}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;margin-top:6px;border:1px solid var(--line);">
         </div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="saveEmoIcons()">${ICONS.check} ບັນທຶກຮູບໄອຄອນ</button>
@@ -2812,7 +2853,16 @@ function openBannerFormModal(banner){
   openModal(`
     <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂແບນເນີ້':'ເພີ່ມແບນເນີ້ໃໝ່'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
     <form id="bannerForm">
-      <div class="field"><label>ລິ້ງຮູບ (Google Drive / ລິ້ງຮູບໂດຍກົງ) *</label><input data-key="imageUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(banner.imageUrl||'')}" required><p class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ /file/d/ID/view ເປັນ /uc?id=ID</p></div>
+      <div class="field">
+        <label>ລິ້ງຮູບ (Google Drive / ລິ້ງຮູບໂດຍກົງ) *</label>
+        <input id="bannerImageUrlInput" data-key="imageUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(banner.imageUrl||'')}" required onblur="handlePhotoUrlBlur(this, 'bannerImgPreview')">
+        <p class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ /file/d/ID/view ເປັນ /uc?id=ID (ຈະແປງອັດຕະໂນມັດ)</p>
+        <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+          📷 ອັບໂຫລດຈາກເຄື່ອງ
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'bannerImageUrlInput', 'bannerImgPreview')">
+        </label>
+        <img id="bannerImgPreview" src="${escapeHtml(banner.imageUrl||'')}" style="width:160px;height:100px;object-fit:cover;border-radius:8px;margin-top:8px;border:1px solid var(--line); display:${banner.imageUrl?'block':'none'};" onerror="this.style.display='none'">
+      </div>
       <div class="field"><label>ລິ້ງເມື່ອກົດ (ຖ້າມີ)</label><input data-key="link" type="text" placeholder="https://..."></div>
       <div class="field"><label>ລຳດັບສະແດງ (ໂຕເລກນ້ອຍ = ສະແດງກ່ອນ)</label><input data-key="order" type="number" value="${banner.order!=null?banner.order:0}"></div>
     </form>
@@ -2939,7 +2989,7 @@ function renderAdminSettings(){
     </div>
     <div class="field" style="margin-top:8px;">
       <label>🖼️ URL ຮູບໂລໂກ້</label>
-      <input id="logoUrl" type="text" placeholder="https://drive.google.com/uc?id=YOUR_FILE_ID" value="${escapeHtml(t.logoUrl||'')}" oninput="previewLogoUrl(this.value)">
+      <input id="logoUrl" type="text" placeholder="https://drive.google.com/uc?id=YOUR_FILE_ID" value="${escapeHtml(t.logoUrl||'')}" oninput="previewLogoUrl(this.value)" onblur="this.value=toDriveDirectUrl(this.value); previewLogoUrl(this.value);">
       <div class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ <code>/file/d/ID/view</code> ເປັນ <code>/uc?id=ID</code></div>
       <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
         📷 ອັບໂຫລດຈາກເຄື່ອງ
@@ -2953,7 +3003,11 @@ function renderAdminSettings(){
     <div class="card settings-section">
       <div class="field">
         <label>URL ຮູບພື້ນຫຼັງ</label>
-        <input id="heroBgImage" type="text" placeholder="https://drive.google.com/uc?id=YOUR_FILE_ID" value="${escapeHtml(t.heroBgImage||'')}" oninput="previewHeroBg(this.value)">
+        <input id="heroBgImage" type="text" placeholder="https://drive.google.com/uc?id=YOUR_FILE_ID" value="${escapeHtml(t.heroBgImage||'')}" oninput="previewHeroBg(this.value)" onblur="this.value=toDriveDirectUrl(this.value); previewHeroBg(this.value);">
+        <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+          📷 ອັບໂຫລດຈາກເຄື່ອງ
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'heroBgImage')">
+        </label>
         <div class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ <code>/file/d/ID/view</code> ເປັນ <code>/uc?id=ID</code></div>
       </div>
       <div class="field">
@@ -2970,7 +3024,11 @@ function renderAdminSettings(){
     <div class="card settings-section">
       <div class="field">
         <label>URL ຮູບພື້ນຫຼັງໜ້າ Login</label>
-        <input id="loginBgImage" type="text" placeholder="https://drive.google.com/uc?id=YOUR_FILE_ID" value="${escapeHtml(t.loginBgImage||'')}">
+        <input id="loginBgImage" type="text" placeholder="https://drive.google.com/uc?id=YOUR_FILE_ID" value="${escapeHtml(t.loginBgImage||'')}" onblur="this.value=toDriveDirectUrl(this.value);">
+        <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+          📷 ອັບໂຫລດຈາກເຄື່ອງ
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'loginBgImage')">
+        </label>
         <div class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ <code>/file/d/ID/view</code> ເປັນ <code>/uc?id=ID</code></div>
       </div>
       <div class="field">
@@ -3005,7 +3063,31 @@ function renderAdminSettings(){
       <button class="btn btn-danger btn-sm" onclick="resetTheme()">🔄 Reset Default</button>
       <button class="btn btn-primary" style="flex:1;" onclick="saveThemeAll()">${ICONS.check} ບັນທຶກທຸກຢ່າງ</button>
     </div>
+    <div class="section-label" style="margin-top:30px;">🔑 ປ່ຽນລະຫັດຜ່ານ Master (CEO)</div>
+    <div class="card settings-section" style="background:rgba(255,107,94,0.06); border-color:rgba(255,107,94,0.3);">
+      <p style="font-size:12px; color:var(--text-mid); margin:0 0 12px;">ລະຫັດຜ່ານ Master ໃຊ້ເຂົ້າສູ່ລະບົບ Admin ໃນຖານະ CEO ແລະ ໃຊ້ຢືນຢັນສິດ CEO ໃນການຈັດການ Admin ອື່ນໆ. ກະລຸນາເກັບໄວ້ໃຫ້ດີ ຖ້າລືມຈະຕ້ອງເຂົ້າໄປແກ້ໃນ Apps Script ໂດຍກົງ.</p>
+      <div class="field"><label>ລະຫັດຜ່ານປັດຈຸບັນ</label><input id="curMasterPw" type="password" placeholder="••••••••"></div>
+      <div class="field"><label>ລະຫັດຜ່ານໃໝ່</label><input id="newMasterPw1" type="password" placeholder="ຢ່າງໜ້ອຍ 4 ໂຕອັກສອນ"></div>
+      <div class="field"><label>ພິມລະຫັດຜ່ານໃໝ່ອີກຄັ້ງ</label><input id="newMasterPw2" type="password" placeholder="ພິມຄືນເພື່ອຢືນຢັນ"></div>
+      <button class="btn btn-danger btn-sm" onclick="submitChangeMasterPassword()">🔑 ປ່ຽນລະຫັດຜ່ານ</button>
+    </div>
     <div style="height:40px;"></div>`;
+}
+async function submitChangeMasterPassword(){
+  const cur = document.getElementById('curMasterPw').value;
+  const n1 = document.getElementById('newMasterPw1').value;
+  const n2 = document.getElementById('newMasterPw2').value;
+  if(!cur || !n1 || !n2){ toast('ກະລຸນາປ້ອນໃຫ້ຄົບທຸກຊ່ອງ','error'); return; }
+  if(n1 !== n2){ toast('ລະຫັດຜ່ານໃໝ່ບໍ່ກົງກັນ','error'); return; }
+  if(n1.length < 4){ toast('ລະຫັດຜ່ານໃໝ່ຕ້ອງມີຢ່າງໜ້ອຍ 4 ໂຕອັກສອນ','error'); return; }
+  try{
+    await gasCall('adminChangeMasterPassword', cur, n1);
+    toast('ປ່ຽນລະຫັດຜ່ານສຳເລັດ — ກະລຸນາ Login ໃໝ່','success');
+    document.getElementById('curMasterPw').value='';
+    document.getElementById('newMasterPw1').value='';
+    document.getElementById('newMasterPw2').value='';
+    adminLogout();
+  }catch(e){ toast(e.message || 'ປ່ຽນລະຫັດຜ່ານບໍ່ສຳເລັດ','error'); }
 }
 function previewLogoUrl(url) {
   const wrap = document.getElementById('logoPreviewWrap');
@@ -3523,6 +3605,23 @@ async function fetchPkData(monthKey){
     ]);
     if(res && !res.error){
       _pkCache = res.list || [];
+      _pkCache.forEach(r=>{
+        if(r.coverUrl) r.coverUrl = toDriveDirectUrl(r.coverUrl);
+        if(r.match){
+          if(r.match.urlA) r.match.urlA = toDriveDirectUrl(r.match.urlA);
+          if(r.match.urlB) r.match.urlB = toDriveDirectUrl(r.match.urlB);
+        }
+      });
+      Object.keys(photos.covers||{}).forEach(d=>{
+        Object.keys(photos.covers[d]).forEach(k=>{ photos.covers[d][k] = toDriveDirectUrl(photos.covers[d][k]); });
+      });
+      Object.keys(photos.matches||{}).forEach(d=>{
+        Object.keys(photos.matches[d]).forEach(mid=>{
+          const mm = photos.matches[d][mid];
+          if(mm.urlA) mm.urlA = toDriveDirectUrl(mm.urlA);
+          if(mm.urlB) mm.urlB = toDriveDirectUrl(mm.urlB);
+        });
+      });
       State.pkMonths = res.months || [];
       State.activePkMonth = res.month || State.activePkMonth;
       State.pkPhotos = photos;
@@ -3733,7 +3832,15 @@ function openPkCoverModal(dateKey, bigoId){
   const cur = (State.pkPhotos.covers && State.pkPhotos.covers[dateKey] && State.pkPhotos.covers[dateKey][bigoId.toLowerCase()]) || '';
   openModal(`
     <div class="modal-head"><h3>ຮູບໜ້າປົກ — ${escapeHtml(bigoId)}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <div class="field"><label>URL ຮູບ (Google Drive/link ໂດຍກົງ)</label><input id="pkCoverUrl" type="text" value="${escapeHtml(cur)}"></div>
+    <div class="field">
+      <label>URL ຮູບ (Google Drive/link ໂດຍກົງ)</label>
+      <input id="pkCoverUrl" type="text" value="${escapeHtml(cur)}" onblur="handlePhotoUrlBlur(this, 'pkCoverPreview')">
+      <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+        📷 ອັບໂຫລດຈາກເຄື່ອງ
+        <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'pkCoverUrl', 'pkCoverPreview')">
+      </label>
+      <img id="pkCoverPreview" src="${escapeHtml(cur)}" style="width:90px;height:90px;object-fit:cover;border-radius:12px;margin-top:8px;border:2px solid var(--gold); display:${cur?'block':'none'};" onerror="this.style.display='none'">
+    </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
       <button class="btn btn-primary" onclick="submitPkCover('${dateKey}','${bigoId}')">${ICONS.check} ບັນທຶກ</button></div>`);
 }
@@ -3755,8 +3862,24 @@ function openPkMatchModal(dateKey, bigoId){
     <div class="field"><label>ຊື່ຄູ່ຕໍ່ສູ້</label><input id="pkVjB" type="text" value="${escapeHtml(cur.vjB||'')}"></div>
     <div class="field"><label>Bigo ID ຄູ່ຕໍ່ສູ້</label><input id="pkIdB" type="text" value="${escapeHtml(cur.idB||'')}"></div>
     <div class="field"><label>ສັງກັດຄູ່ຕໍ່ສູ້</label><input id="pkAgencyB" type="text" value="${escapeHtml(cur.agencyB||'')}"></div>
-    <div class="field"><label>URL ຮູບຝ່າຍເຮົາ</label><input id="pkUrlA" type="text" value="${escapeHtml(cur.urlA||'')}"></div>
-    <div class="field"><label>URL ຮູບຄູ່ຕໍ່ສູ້</label><input id="pkUrlB" type="text" value="${escapeHtml(cur.urlB||'')}"></div>
+    <div class="field">
+      <label>URL ຮູບຝ່າຍເຮົາ</label>
+      <input id="pkUrlA" type="text" value="${escapeHtml(cur.urlA||'')}" onblur="handlePhotoUrlBlur(this, 'pkUrlAPreview')">
+      <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+        📷 ອັບໂຫລດຈາກເຄື່ອງ
+        <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'pkUrlA', 'pkUrlAPreview')">
+      </label>
+      <img id="pkUrlAPreview" src="${escapeHtml(cur.urlA||'')}" style="width:70px;height:70px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--gold); display:${cur.urlA?'block':'none'};" onerror="this.style.display='none'">
+    </div>
+    <div class="field">
+      <label>URL ຮູບຄູ່ຕໍ່ສູ້</label>
+      <input id="pkUrlB" type="text" value="${escapeHtml(cur.urlB||'')}" onblur="handlePhotoUrlBlur(this, 'pkUrlBPreview')">
+      <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+        📷 ອັບໂຫລດຈາກເຄື່ອງ
+        <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'pkUrlB', 'pkUrlBPreview')">
+      </label>
+      <img id="pkUrlBPreview" src="${escapeHtml(cur.urlB||'')}" style="width:70px;height:70px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--ice); display:${cur.urlB?'block':'none'};" onerror="this.style.display='none'">
+    </div>
     <div class="field-row">
       <div class="field"><label>ຜົນ ຝ່າຍເຮົາ</label><select id="pkResultA">
         <option value="WIN" ${cur.resultA==='WIN'?'selected':''}>WIN</option>
@@ -3848,7 +3971,8 @@ async function fetchPkFamilyData(){
       gasCall('getPkFamilyBannersData').catch(()=>({banners:[]}))
     ]);
     _pkFamilyCache = pkData;
-    State.pkFamilyBanners = banners;
+      (banners.banners||[]).forEach(x=>x.imageUrl=toDriveDirectUrl(x.imageUrl));
+      State.pkFamilyBanners = banners;
     try{ localStorage.setItem('emo_cache_pkfamily', JSON.stringify(_pkFamilyCache)); }catch(e){}
     try{ localStorage.setItem('emo_cache_pkfamily_banners', JSON.stringify(banners)); }catch(e){}
   }
@@ -4094,12 +4218,17 @@ function openPkFamilyBannerFormModal(banner){
   openModal(`
     <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂແບນເນີ້':'ເພີ່ມແບນເນີ້ໃໝ່'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
     <form id="pkFamilyBannerForm">
-      <div class="field"><label>ລິ້ງຮູບ (Google Drive / ລິ້ງຮູບໂດຍກົງ) *</label><input data-key="imageUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(banner.imageUrl||'')}" required><p class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ /file/d/ID/view ເປັນ /uc?id=ID</p></div>
+      <div class="field">
+        <label>ລິ້ງຮູບ (Google Drive / ລິ້ງຮູບໂດຍກົງ) *</label>
+        <input id="pkFamilyBannerImageUrlInput" data-key="imageUrl" type="text" placeholder="https://drive.google.com/uc?id=..." value="${escapeHtml(banner.imageUrl||'')}" required onblur="handlePhotoUrlBlur(this, 'pkFamilyBannerImgPreview')">
+        <p class="field-hint">Google Drive: ເປີດ file → Share → Copy link → ປ່ຽນ /file/d/ID/view ເປັນ /uc?id=ID (ຈະແປງອັດຕະໂນມັດ)</p>
+      </div>
       <div class="field"><label>ລິ້ງເມື່ອກົດ (ຖ້າມີ)</label><input data-key="link" type="text" placeholder="https://..." value="${escapeHtml(banner.link||'')}"></div>
       <label class="btn btn-ghost btn-sm" style="display:inline-flex; margin-top:6px; cursor:pointer;">
         📷 ອັບໂຫລດຈາກເຄື່ອງ
-        <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'TARGET_ID')">
+        <input type="file" accept="image/*" style="display:none;" onchange="uploadPhotoToDrive(this, 'pkFamilyBannerImageUrlInput', 'pkFamilyBannerImgPreview')">
       </label>
+      <img id="pkFamilyBannerImgPreview" src="${escapeHtml(banner.imageUrl||'')}" style="width:160px;height:100px;object-fit:cover;border-radius:8px;margin-top:8px;border:1px solid var(--line); display:${banner.imageUrl?'block':'none'};" onerror="this.style.display='none'">
       <div class="field"><label>ລຳດັບສະແດງ (ໂຕເລກນ້ອຍ = ສະແດງກ່ອນ)</label><input data-key="order" type="number" value="${banner.order!=null?banner.order:0}"></div>
     </form>
     <div class="modal-actions">

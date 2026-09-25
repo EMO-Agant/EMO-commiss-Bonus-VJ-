@@ -344,6 +344,8 @@ table.data .num{ font-family:var(--f-mono); text-align:right; }
 .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--mint); display:inline-block; box-shadow:0 0 8px var(--mint); }
 .sync-dot.syncing{ background:var(--gold); box-shadow:0 0 8px var(--gold); animation:pulse 1s infinite; }
 .sync-dot.error{ background:var(--coral); box-shadow:0 0 8px var(--coral); }
+#syncBtn.spinning svg{ animation: spin 0.9s linear infinite; }
+@keyframes spin{ to{ transform: rotate(360deg); } }
 @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
 .section-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text-low); margin:22px 0 10px; }
 .section-label:first-child{ margin-top:0; }
@@ -840,6 +842,10 @@ async function gasCall(fnName, ...args){
     'adminSavePkFamilyTeams','adminSavePkFamilyRound','adminSetPkFamilyWinner','adminResetPkFamily','adminSavePkFamilyPool','adminSetPkFamilyMatchTime','adminSetPkFamilyScore',
     'adminUploadPhotoToDrive',
     'adminChangeMasterPassword',
+    'savePkFamilyBannersData',
+    'getEmoExtraKnowledgeList',
+    'adminGetVjPhoneList',
+    'adminGetAdminList',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -1401,7 +1407,7 @@ function afterRenderHook(){
 document.getElementById('menuBtn').addEventListener('click', openDrawer);
 document.getElementById('drawerClose').addEventListener('click', closeDrawer);
 document.getElementById('overlay').addEventListener('click', closeDrawer);
-document.getElementById('syncBtn').addEventListener('click', () => refreshData(true));
+document.getElementById('syncBtn').addEventListener('click', refreshEverything);
 
 setTimeout(()=>{
   if(State.loading){
@@ -1484,6 +1490,48 @@ async function bootApp(){
   render();
   if(State.months.length) toast('ອັບເດດຂໍ້ມູນລ້າສຸດແລ້ວ ✓', 'info');
 }
+
+/* ============================================================================
+   REFRESH ທັງໝົດ — ກົດປຸ່ມ Sync ເພື່ອດຶງຂໍ້ມູນໃໝ່ທຸກໜ້າ ໂດຍບໍ່ຕ້ອງ reload
+============================================================================ */
+let _refreshing = false;
+async function refreshEverything(){
+  if(_refreshing) return;
+  _refreshing = true;
+  setSync('syncing');
+  const btn = document.getElementById('syncBtn');
+  if(btn) btn.classList.add('spinning');
+  try{
+    // 1) ລ້າງ cache ຝັ່ງ Server
+    await gasCall('refreshServerCache');
+
+    // 2) ລ້າງ cache ຝັ່ງ Client ທັງໝົດ
+    _pkCache = null;
+    _pkFamilyCache = null;
+    _vjLiveCache = null; _vjLiveCacheByMonth = {};
+    _newVjActiveCache = null; _newVjActiveCacheByMonth = {};
+    _cashBonusCache = null; _cashBonusCacheByMonth = {};
+    _vjPhoneCache = null; _adminListCache = null; _emoKbCache = null;
+    State.lookupHistory = null;
+
+    // 3) ດຶງຂໍ້ມູນໃໝ່ (ເດືອນ, ແບນເນີ້, theme, ຮູບ, Live)
+    await bootApp();
+  }catch(err){
+    setSync('error');
+    toast(err.message || 'Refresh ບໍ່ສຳເລັດ', 'error');
+  }finally{
+    _refreshing = false;
+    if(btn) btn.classList.remove('spinning');
+    setSync('idle');
+  }
+}
+
+// ອັບເດດອັດຕະໂນມັດ ເມື່ອ VJ ກັບມາເປີດແອັບ (ສະຫຼັບແທັບ / ກັບມາຈາກ background)
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && State.vjSession && !_refreshing){
+    refreshEverything();
+  }
+});
 
 // ---- ຈຸດເລີ່ມແອັບ: ກວດ session ຂອງ VJ ກ່ອນ ----
 if(State.vjSession){

@@ -677,6 +677,7 @@ const State = {
   searchQuery: '',
   loading: true,
   syncStatus: 'idle',
+  lastCacheVer: null,
   editingVj: null,
   editingMonth: null,
   _liveSearchId: '',
@@ -992,7 +993,7 @@ let _loginPollTimer = null;
 function startLoginNotificationPolling(){
   if(!State.isAdmin) return;
   stopLoginNotificationPolling();
-  _loginPollTimer = setInterval(checkNewVjLogins, 10000);
+  _loginPollTimer = setInterval(checkNewVjLogins, 20000);
   checkNewVjLogins();
 }
 function stopLoginNotificationPolling(){
@@ -1486,6 +1487,8 @@ async function bootApp(){
     console.error('init error:', err);
   }
 
+  try{ State.lastCacheVer = await gasCall('getCacheVersion'); }catch(e){}
+
   State.loading = false;
   render();
   if(State.months.length) toast('ອັບເດດຂໍ້ມູນລ້າສຸດແລ້ວ ✓', 'info');
@@ -1529,9 +1532,20 @@ async function refreshEverything(){
 // ອັບເດດອັດຕະໂນມັດ ເມື່ອ VJ ກັບມາເປີດແອັບ (ສະຫຼັບແທັບ / ກັບມາຈາກ background)
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible' && State.vjSession && !_refreshing){
-    refreshEverything();
+    checkForUpdatesAndRefresh();
   }
 });
+
+async function checkForUpdatesAndRefresh(){
+  try{
+    const ver = await gasCall('getCacheVersion');
+    if(State.lastCacheVer && ver && ver !== State.lastCacheVer){
+      toast('ພົບຂໍ້ມູນໃໝ່ — ກຳລັງອັບເດດ...', 'info');
+      await refreshEverything();
+    }
+    State.lastCacheVer = ver;
+  }catch(e){ /* ບໍ່ຕ້ອງລົບກວນ ຖ້າ network ມີບັນຫາຊົ່ວຄາວ */ }
+}
 
 // ---- ຈຸດເລີ່ມແອັບ: ກວດ session ຂອງ VJ ກ່ອນ ----
 if(State.vjSession){
@@ -3278,11 +3292,7 @@ function switchLiveMonth(key){
   fetchVjLiveData(key);  // ຄ່ອຍ sync ຫຼັງບ້ານ (ໃຊ້ cache ຖ້າມີ, ຫຼືດຶງໃໝ່ຖ້າຍັງບໍ່ມີ)
 }
 function startVjLiveAutoRefresh(){
-  stopVjLiveAutoRefresh();
-  _vjLiveAutoRefreshTimer = setInterval(()=>{
-    if(State.view === 'livedata' && !_vjLiveLoading){ fetchVjLiveData(State.activeLiveMonth); }
-    else if(State.view !== 'livedata'){ stopVjLiveAutoRefresh(); }
-  }, 60000);
+  stopVjLiveAutoRefresh(); // ຢຸດ auto-refresh ທຸກ 60 ວິນາທີແລ້ວ — ໃຫ້ອັບເດດຜ່ານປຸ່ມ 🔄 ຫຼື ຕອນສະຫຼັບກັບມາໜ້າແອັບແທນ
 }
 function stopVjLiveAutoRefresh(){ if(_vjLiveAutoRefreshTimer){ clearInterval(_vjLiveAutoRefreshTimer); _vjLiveAutoRefreshTimer = null; } }
 function renderVjLiveData() {

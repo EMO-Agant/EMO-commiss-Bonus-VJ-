@@ -225,7 +225,7 @@ input,select,textarea{ font-family:inherit; }
   position:relative; overflow:hidden;
   background:
     var(--hero-bg-image, none),
-    radial-gradient(180px 120px at 85% -20%, var(--hero-glow), transparent 55%)
+    radial-gradient(180px 120px at 85% -20%, var(--hero-glow), transparent 55%),
     linear-gradient(165deg, var(--hero-bg1), var(--hero-bg2));
   background-size: cover, auto, auto;
   background-position: center, center, center;
@@ -671,6 +671,7 @@ const State = {
   myBigoId: localStorage.getItem('emo_my_bigoid') || '',
   vjSession: JSON.parse(localStorage.getItem('emo_vj_session') || 'null'),
   signupPhotos: {},
+  vjPhotos: {},
   recentLogins: [],
   _lastLoginCheck: new Date(Date.now() - 60000).toISOString(),
   lookupHistory: null,
@@ -854,13 +855,14 @@ async function gasCall(fnName, ...args){
       if(isRead){
         const url = new URL(API_BASE_URL);
         url.searchParams.set('action', fnName);
+        if(State.vjSession && State.vjSession.token) url.searchParams.set('token', State.vjSession.token);
         if(args.length) url.searchParams.set('args', JSON.stringify(args));
         res = await fetch(url.toString(), { method:'GET', signal: ctrl.signal });
       } else {
         res = await fetch(API_BASE_URL, {
           method:'POST',
           headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: fnName, args }),
+          body: JSON.stringify({ action: fnName, args, token: (State.vjSession && State.vjSession.token) || '' }),
           signal: ctrl.signal
         });
       }
@@ -868,6 +870,7 @@ async function gasCall(fnName, ...args){
       let payload;
       try{ payload = JSON.parse(text); }
       catch(e){ const err = new Error('ເຊີບເວີ Google ຫຍຸ້ງ ຫຼື ຕອບຊ້າ — ກະລຸນາລອງໃໝ່'); err.retry = true; throw err; }
+      if(payload && payload.error === 'UNAUTHENTICATED'){ vjSessionLogout(); throw new Error('ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່'); }
       if(!payload || payload.ok !== true) throw new Error((payload && payload.error) || 'API error');
       return payload.data;
     }catch(err){
@@ -1227,7 +1230,7 @@ function renderShell(){
   authArea.innerHTML = State.isAdmin
     ? `<button class="side-link" onclick="adminLogout()">${ICONS.logout}ອອກຈາກ Admin</button>`
     : `<button class="side-link" onclick="setView('admin-login')">${ICONS.lock}ເຂົ້າສູ່ລະບົບ Admin</button>`;
-
+  authArea.innerHTML += `<button class="side-link" onclick="vjSessionLogout()">${ICONS.logout}ອອກຈາກລະບົບ VJ</button>`;
   const tabbar = document.getElementById('tabbar');
   tabbar.innerHTML = TABBAR_NAV.map(n => tabItemHtml(n)).join('');
 
@@ -1240,6 +1243,7 @@ function renderShell(){
     dh += `<div class="drawer-divider"></div><button class="drawer-link" onclick="setView('admin-login'); closeDrawer();">${ICONS.lock}ເຂົ້າສູ່ລະບົບ Admin</button>`;
   }
   drawerLinks.innerHTML = dh;
+  dh += `<div class="drawer-divider"></div><button class="drawer-link" onclick="vjSessionLogout()">${ICONS.logout}ອອກຈາກລະບົບ VJ</button>`;
 }
 function sideLinkHtml(n){
   const active = State.view === n.id ? 'active' : '';
@@ -2094,7 +2098,7 @@ async function submitVjPhoneLogin(){
   try{
     const res = await gasCall('vjLoginByPhone', phone);
     if(res && res.ok){
-      State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId };
+      State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId, token: res.token };
       localStorage.setItem('emo_vj_session', JSON.stringify(State.vjSession));
       document.body.classList.remove('pre-login');
       toast('ຍິນດີຕ້ອນຮັບ ' + res.vjName, 'success');
@@ -3732,7 +3736,7 @@ function renderPk(){
               <div style="display:flex; align-items:flex-start; justify-content:center; gap:20px; margin:10px 0 12px; position:relative;">
                 <div style="text-align:center; width:110px;">
                   <div style="position:relative; display:inline-block;">
-                    <img src="${escapeHtml(m.urlA||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);" onerror="this.onerror=null;this.src='https://i.postimg.cc/TwS2YyTf/EMO.png'"
+                    <img src="${escapeHtml(m.urlA||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);" onerror="this.onerror=null;this.src='https://i.postimg.cc/TwS2YyTf/EMO.png'">
                     ${m.resultA ? `<img src="${m.resultA==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:36px;">` : ''}
                   </div>
                   <div style="font-weight:700;font-size:12.5px;margin-top:12px;">${escapeHtml(r.vjName||r.bigoId)}</div>

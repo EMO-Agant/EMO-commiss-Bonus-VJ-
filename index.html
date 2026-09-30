@@ -2489,20 +2489,6 @@ function openVjFormModal(month, vj){
       <button class="btn btn-primary" onclick="submitVjForm('${month}', ${isEdit?vj.rowIndex:-1})">${ICONS.check} ບັນທຶກ</button>
     </div>`);
 }
-async function submitVjForm(month, rowIndex){
-  const inputs = document.querySelectorAll('#vjForm [data-key]');
-  const payload = {};
-  inputs.forEach(inp => payload[inp.dataset.key] = inp.value);
-  if(!payload.bigoId){ toast('ກະລຸນາປ້ອນ Bigo ID','error'); return; }
-  if(rowIndex && rowIndex > 1) payload.rowIndex = rowIndex;
-  try{
-    await gasCall('adminSaveVj', State.adminPassword, month, payload);
-    toast('ບັນທຶກ VJ ສຳເລັດ','success');
-    closeModal();
-    await refreshData(false);
-    setView('admin-vj', {month});
-  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
-}
 
 async function submitVjForm(month, rowIndex){
   const inputs = document.querySelectorAll('#vjForm [data-key]');

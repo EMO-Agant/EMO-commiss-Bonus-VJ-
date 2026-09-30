@@ -669,7 +669,7 @@ const State = {
   monthsData: {},
   activeMonth: null,
   myBigoId: localStorage.getItem('emo_my_bigoid') || '',
-  vjSession: null,
+  vjSession: JSON.parse(localStorage.getItem('emo_vj_session') || 'null'),
   signupPhotos: {},
   recentLogins: [],
   _lastLoginCheck: new Date(Date.now() - 60000).toISOString(),
@@ -824,60 +824,64 @@ function checkApiConfigured(){
   return true;
 }
 
-/**
- * ຮຽກ backend API. ອ່ານ (read-only) ໃຊ້ GET, ຂຽນ/ມີລະຫັດຜ່ານ ໃຊ້ POST.
- * fnName = ຊື່ action (ຕ້ອງກົງກັບ registry ໃນ Code.gs), args = array ຂອງ argument
- */
+const READ_ACTIONS = new Set([
+  'ping','getScriptInfo','listMonths','getMonthData','getAllData','findVjByBigoId',
+  'getDashboardStats','checkConnection','getThemeSettings','getBannersData',
+  'getPkFamilyBannersData','getVjLiveData','getVjLiveById','listVjLiveMonths',
+  'getNewVjActiveData','getCashBonusData','listPkMonths','getPkData','getPkPhotos',
+  'getVjPhotos','getSignupPhotos','refreshServerCache','getCacheVersion','getPkFamilyData'
+]);
+const MAX_PARALLEL = 4;
+let _gasActive = 0;
+const _gasQueue = [];
+function gasAcquire(){
+  return new Promise(res => { if(_gasActive < MAX_PARALLEL){ _gasActive++; res(); } else _gasQueue.push(res); });
+}
+function gasRelease(){ const next = _gasQueue.shift(); if(next) next(); else _gasActive--; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 async function gasCall(fnName, ...args){
-  if(!API_BASE_URL){
-    throw new Error('API_BASE_URL ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ — ແກ້ໄຂໃນ APP_CONFIG ດ້ານເທິງຂອງ index.html');
-  }
-  const WRITE_ACTIONS = new Set([
-    'adminLogin','adminCreateMonth','adminDeleteMonth','adminSaveSummary',
-    'adminSaveVj','adminDeleteVj','adminBulkImportVj',
-    'saveThemeSettings','resetThemeSettings','saveBannersData',
-    'askEmoAssistant',
-    'adminSaveVjPhoto','adminDeleteVjPhoto',
-    'adminSavePkCoverPhoto','adminSavePkMatchPhoto','adminDeletePkMatchPhoto',
-    'adminLoginV2','adminSaveAdminAccount','adminDeleteAdminAccount',
-    'adminSavePkFamilyTeams','adminSavePkFamilyRound','adminSetPkFamilyWinner','adminResetPkFamily','adminSavePkFamilyPool','adminSetPkFamilyMatchTime','adminSetPkFamilyScore',
-    'adminUploadPhotoToDrive',
-    'adminChangeMasterPassword',
-    'savePkFamilyBannersData',
-    'getEmoExtraKnowledgeList',
-    'adminGetVjPhoneList',
-    'adminGetAdminList',
-  ]);
-  const isWrite = WRITE_ACTIONS.has(fnName);
-
-  let res, text;
-  try{
-    if(isWrite){
-      // POST ດ້ວຍ Content-Type: text/plain ເພື່ອຫຼີກລ່ຽງ CORS preflight (Apps Script ບໍ່ຮອງຮັບ)
-      res = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: fnName, args: args })
-      });
-    } else {
-      const url = new URL(API_BASE_URL);
-      url.searchParams.set('action', fnName);
-      if(args && args.length) url.searchParams.set('args', JSON.stringify(args));
-      res = await fetch(url.toString(), { method: 'GET' });
+  if(!API_BASE_URL) throw new Error('API_BASE_URL ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ');
+  const isRead = READ_ACTIONS.has(fnName);     // ທີ່ບໍ່ຢູ່ໃນລາຍການນີ້ = POST ທັງໝົດ
+  const maxTry = isRead ? 3 : 1;               // ການຂຽນບໍ່ retry ເພື່ອກັນບັນທຶກຊ້ຳ
+  let lastErr;
+  for(let attempt = 1; attempt <= maxTry; attempt++){
+    await gasAcquire();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    try{
+      let res;
+      if(isRead){
+        const url = new URL(API_BASE_URL);
+        url.searchParams.set('action', fnName);
+        if(args.length) url.searchParams.set('args', JSON.stringify(args));
+        res = await fetch(url.toString(), { method:'GET', signal: ctrl.signal });
+      } else {
+        res = await fetch(API_BASE_URL, {
+          method:'POST',
+          headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: fnName, args }),
+          signal: ctrl.signal
+        });
+      }
+      const text = await res.text();
+      let payload;
+      try{ payload = JSON.parse(text); }
+      catch(e){ const err = new Error('ເຊີບເວີ Google ຫຍຸ້ງ ຫຼື ຕອບຊ້າ — ກະລຸນາລອງໃໝ່'); err.retry = true; throw err; }
+      if(!payload || payload.ok !== true) throw new Error((payload && payload.error) || 'API error');
+      return payload.data;
+    }catch(err){
+      lastErr = err;
+      if(err.name === 'AbortError'){ lastErr = new Error('ໝົດເວລາລໍຖ້າເຊີບເວີ'); lastErr.retry = true; }
+      else if(err instanceof TypeError){ lastErr = new Error('ເຊື່ອມຕໍ່ API ບໍ່ໄດ້ (ເນັດ/CORS)'); lastErr.retry = true; }
+      if(!lastErr.retry || attempt === maxTry) throw lastErr;
+    }finally{
+      clearTimeout(timer);
+      gasRelease();
     }
-    text = await res.text();
-  }catch(networkErr){
-    throw new Error('ເຊື່ອມຕໍ່ API ບໍ່ໄດ້ (network/CORS): ' + networkErr.message);
+    await sleep(800 * attempt);   // ລໍກ່ອນລອງໃໝ່
   }
-
-  let payload;
-  try{ payload = JSON.parse(text); }
-  catch(parseErr){ throw new Error('API ຕອບກັບບໍ່ແມ່ນ JSON ທີ່ຖືກຕ້ອງ: ' + text.slice(0,200)); }
-
-  if(!payload || payload.ok !== true){
-    throw new Error((payload && payload.error) || 'API error (unknown)');
-  }
-  return payload.data;
+  throw lastErr;
 }
 
 /* ============================================================================
@@ -1002,7 +1006,7 @@ function stopLoginNotificationPolling(){
 async function checkNewVjLogins(){
   if(!State.isAdmin) return;
   try{
-    const logs = await gasCall('getVjLoginLogs', State._lastLoginCheck);
+    const logs = await gasCall('getVjLoginLogs', State.adminPassword, State._lastLoginCheck);
     if(logs && logs.length){
       logs.forEach(l => {
         playLoginSound();
@@ -1239,7 +1243,7 @@ function renderShell(){
 }
 function sideLinkHtml(n){
   const active = State.view === n.id ? 'active' : '';
-  return `<button class="side-link ${active}" onclick="setView('${n.id}')"><span style="font-size:16px;margin-right:2px;">${n.icon}${n.label}</button>`;
+  return `<button class="side-link ${active}" onclick="setView('${n.id}')"><span style="font-size:16px;margin-right:2px;">${n.icon}</span>${n.label}</button>`;
 }
 function tabItemHtml(n){
   const active = State.view === n.id ? 'active' : '';
@@ -1250,7 +1254,7 @@ function tabItemHtml(n){
 }
 function drawerLinkHtml(n){
   const active = State.view === n.id ? 'active' : '';
-  return `<button class="drawer-link ${active}" onclick="setView('${n.id}'); closeDrawer();"><span style="font-size:16px;margin-right:2px;">${n.icon}${n.label}</button>`;
+  return `<button class="drawer-link ${active}" onclick="setView('${n.id}'); closeDrawer();"><span style="font-size:16px;margin-right:2px;">${n.icon}</span>${n.label}</button>`;
 }
 function openDrawer(){ document.getElementById('overlay').classList.add('show'); document.getElementById('drawer').classList.add('show'); }
 function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); document.getElementById('drawer').classList.remove('show'); }
@@ -1919,7 +1923,7 @@ function renderBonus(){
           <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:${i===0?'linear-gradient(145deg,var(--gold),#c98f1c)':'linear-gradient(145deg,var(--ink),var(--ink-3))'};border:1px solid ${i===0?'rgba(245,184,46,0.5)':'var(--line)'};display:flex;align-items:center;justify-content:center;font-size:18px;">${i===0?'🥇':'📅'}</div>
           <div style="flex:1; min-width:0;">
             <div style="font-weight:700; font-size:14.5px;">${escapeHtml(h.label)}</div>
-            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>📅 ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span>></div>
+            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>📅 ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span></div>
           </div>
           <div style="text-align:right; flex-shrink:0;"><div style="font-family:var(--f-mono); font-weight:800; font-size:16px; color:${i===0?'var(--gold)':'var(--text-hi)'};">$${fmtMoney(h.vj.bonusVjUSD)}</div><div style="font-size:10.5px; color:var(--text-low); margin-top:1px;">+${fmtInt(h.vj.bonusBeansTotal)} beans</div></div>
         </div>`).join('')}
@@ -2091,6 +2095,7 @@ async function submitVjPhoneLogin(){
     const res = await gasCall('vjLoginByPhone', phone);
     if(res && res.ok){
       State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId };
+      localStorage.setItem('emo_vj_session', JSON.stringify(State.vjSession));
       document.body.classList.remove('pre-login');
       toast('ຍິນດີຕ້ອນຮັບ ' + res.vjName, 'success');
       bootApp();
@@ -2488,20 +2493,6 @@ function openVjFormModal(month, vj){
       <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
       <button class="btn btn-primary" onclick="submitVjForm('${month}', ${isEdit?vj.rowIndex:-1})">${ICONS.check} ບັນທຶກ</button>
     </div>`);
-}
-async function submitVjForm(month, rowIndex){
-  const inputs = document.querySelectorAll('#vjForm [data-key]');
-  const payload = {};
-  inputs.forEach(inp => payload[inp.dataset.key] = inp.value);
-  if(!payload.bigoId){ toast('ກະລຸນາປ້ອນ Bigo ID','error'); return; }
-  if(rowIndex && rowIndex > 1) payload.rowIndex = rowIndex;
-  try{
-    await gasCall('adminSaveVj', State.adminPassword, month, payload);
-    toast('ບັນທຶກ VJ ສຳເລັດ','success');
-    closeModal();
-    await refreshData(false);
-    setView('admin-vj', {month});
-  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
 }
 
 async function submitVjForm(month, rowIndex){
@@ -3741,7 +3732,7 @@ function renderPk(){
               <div style="display:flex; align-items:flex-start; justify-content:center; gap:20px; margin:10px 0 12px; position:relative;">
                 <div style="text-align:center; width:110px;">
                   <div style="position:relative; display:inline-block;">
-                    <img src="${escapeHtml(m.urlA||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);" onerror="this.style.opacity=0.2">
+                    <img src="${escapeHtml(m.urlA||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);" onerror="this.onerror=null;this.src='https://i.postimg.cc/TwS2YyTf/EMO.png'"
                     ${m.resultA ? `<img src="${m.resultA==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:36px;">` : ''}
                   </div>
                   <div style="font-weight:700;font-size:12.5px;margin-top:12px;">${escapeHtml(r.vjName||r.bigoId)}</div>
@@ -3755,7 +3746,7 @@ function renderPk(){
 
                 <div style="text-align:center; width:110px;">
                   <div style="position:relative; display:inline-block;">
-                    <img src="${escapeHtml(m.urlB||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--ice);" onerror="this.style.opacity=0.2">
+                    <img src="${escapeHtml(m.urlB||'')}" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--ice);" onerror="this.onerror=null;this.src='https://i.postimg.cc/TwS2YyTf/EMO.png'">
                     ${m.resultB ? `<img src="${m.resultB==='WIN'?'https://i.postimg.cc/7hM2kFMW/icon-WIN.png':'https://i.postimg.cc/k506tJjJ/icon-LOSE.png'}" style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:36px;">` : ''}
                   </div>
                   <div style="font-weight:700;font-size:12.5px;margin-top:12px;">${escapeHtml(m.vjB||'-')}</div>

@@ -301,6 +301,8 @@ input,select,textarea{ font-family:inherit; }
 .btn-sm{ padding:7px 13px; font-size:12.5px; border-radius:9px; }
 .btn-block{ width:100%; }
 .btn-sm svg{ width:14px; height:14px; }
+.btn-refresh{ padding:7px 10px; flex-shrink:0; }
+.btn-refresh.spinning svg{ animation: spin 0.9s linear infinite; }
 .btn:disabled{ opacity:.5; pointer-events:none; }
 .field{ margin-bottom:14px; }
 .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--text-mid); margin-bottom:6px; }
@@ -671,6 +673,8 @@ const State = {
   myBigoId: localStorage.getItem('emo_my_bigoid') || '',
   vjSession: null,
   signupPhotos: {},
+  vjPhotos: {},
+  liveFilter: 'all',
   recentLogins: [],
   _lastLoginCheck: new Date(Date.now() - 60000).toISOString(),
   lookupHistory: null,
@@ -1362,11 +1366,7 @@ function afterRenderHook(){
       if(State.view === 'livedata' && State.isAdmin) {
         const liveList = document.getElementById('vjLiveList');
         if(liveList && _vjLiveCache) {
-          const q = e.target.value.trim().toLowerCase();
-          const filtered = q ? _vjLiveCache.filter(v =>
-            String(v.bigoId).toLowerCase().includes(q) || (v.vjName || '').toLowerCase().includes(q)
-          ) : _vjLiveCache;
-          liveList.innerHTML = filtered.length ? filtered.map(vj => vjLiveCardHtml(vj)).join('') : `<div class="empty-state"><p>ບໍ່ພົບ VJ</p></div>`;
+          liveList.innerHTML = liveListHtml(_vjLiveCache);
         }
         return;
       }
@@ -1516,6 +1516,7 @@ async function refreshEverything(){
     _cashBonusCache = null; _cashBonusCacheByMonth = {};
     _vjPhoneCache = null; _adminListCache = null; _emoKbCache = null;
     State.lookupHistory = null;
+    invalidatePhotoIndex();
 
     // 3) ດຶງຂໍ້ມູນໃໝ່ (ເດືອນ, ແບນເນີ້, theme, ຮູບ, Live)
     await bootApp();
@@ -2502,7 +2503,9 @@ async function submitVjForm(month, rowIndex){
     await gasCall('adminSaveVj', State.adminPassword, month, payload);
     if(photoUrl !== undefined){
       await gasCall('adminSaveVjPhoto', State.adminPassword, payload.bigoId, photoUrl);
+      if(!State.vjPhotos) State.vjPhotos = {};
       State.vjPhotos[String(payload.bigoId).trim().toLowerCase()] = photoUrl;
+      invalidatePhotoIndex();
     }
     toast('ບັນທຶກ VJ ສຳເລັດ','success');
     closeModal();
@@ -3273,23 +3276,80 @@ async function fetchVjLiveData(monthKey, forceRefresh) {
 }
 
 function switchLiveMonth(key){
+  State.liveFilter = 'all';
   State.activeLiveMonth = key;
-  render();              // ★ ໃຫ້ chip ປ່ຽນ active ທັນທີ + ສະແດງ cache/skeleton ທັນທີ
-  fetchVjLiveData(key);  // ຄ່ອຍ sync ຫຼັງບ້ານ (ໃຊ້ cache ຖ້າມີ, ຫຼືດຶງໃໝ່ຖ້າຍັງບໍ່ມີ)
+  render();
+  fetchVjLiveData(key);
 }
+
 function startVjLiveAutoRefresh(){
   stopVjLiveAutoRefresh(); // ຢຸດ auto-refresh ທຸກ 60 ວິນາທີແລ້ວ — ໃຫ້ອັບເດດຜ່ານປຸ່ມ 🔄 ຫຼື ຕອນສະຫຼັບກັບມາໜ້າແອັບແທນ
 }
 function stopVjLiveAutoRefresh(){ if(_vjLiveAutoRefreshTimer){ clearInterval(_vjLiveAutoRefreshTimer); _vjLiveAutoRefreshTimer = null; } }
+
+/* ---------- Live Data: ລຽງ + ກັ່ນຕອງ (ໃຊ້ຮ່ວມກັນທຸກບ່ອນ) ---------- */
+function getLiveDataFilteredSorted(list){
+  const q = (State.searchQuery || '').trim().toLowerCase();
+  const f = State.liveFilter || 'all';
+  let out = list.slice();
+
+  // ຄົ້ນຫາ
+  if (q) out = out.filter(v =>
+    String(v.bigoId).toLowerCase().includes(q) ||
+    (v.vjName || '').toLowerCase().includes(q)
+  );
+
+  // ກັ່ນຕອງ
+  if (f === 'active')   out = out.filter(v => (v.beansMonth || 0) > 0);
+  if (f === 'inactive') out = out.filter(v => (v.beansMonth || 0) === 0);
+  if (f === 'graded')   out = out.filter(v => v.gradeReached);
+  if (f === 'new')      out = out.filter(v => v.isNewVj);
+
+  // ★ ລຽງ: ຖົ່ວຫຼາຍ → ໜ້ອຍ, ຖ້າເທົ່າກັນ ລຽງຕາມຊົ່ວໂມງ, ຖ້າຍັງເທົ່າ ລຽງຕາມຊື່
+  out.sort((a, b) => {
+    const d1 = (b.beansMonth || 0) - (a.beansMonth || 0);
+    if (d1 !== 0) return d1;
+    const d2 = (b.hoursMonth || 0) - (a.hoursMonth || 0);
+    if (d2 !== 0) return d2;
+    return String(a.vjName || a.bigoId).localeCompare(String(b.vjName || b.bigoId));
+  });
+  return out;
+}
+
+function liveListHtml(list){
+  const items = getLiveDataFilteredSorted(list);
+  if (!items.length) return `<div class="empty-state"><p>ບໍ່ພົບ VJ</p></div>`;
+  return items.map((vj, i) => vjLiveCardHtml(vj, i + 1)).join('');
+}
+
+function setLiveFilter(f){
+  State.liveFilter = f;
+  const host = document.getElementById('vjLiveList');
+  if (host && _vjLiveCache) host.innerHTML = liveListHtml(_vjLiveCache);
+  document.querySelectorAll('.live-filter-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset.f === f);
+  });
+}
+
+async function refreshLiveDataBtn(){
+  if (_vjLiveLoading) return;
+  const btn = document.getElementById('liveRefreshBtn');
+  if(btn) btn.classList.add('spinning');
+  invalidatePhotoIndex();
+  try{ await gasCall('refreshServerCache'); }catch(e){}
+  await fetchVjLiveData(State.activeLiveMonth, true);
+  if (_vjLiveCache) toast('ອັບເດດ Live Data ແລ້ວ ✓','success');
+}
+
 function renderVjLiveData() {
   startVjLiveAutoRefresh();
   if (!_vjLiveCache && !_vjLiveLoading) { fetchVjLiveData(); return skeletonHtml(); }
   if (_vjLiveLoading && !_vjLiveCache) return skeletonHtml();
   const list = _vjLiveCache || [];
   if (State.isAdmin) {
-    const q = (State.searchQuery || '').trim().toLowerCase();
-    const filtered = q ? list.filter(v => String(v.bigoId).toLowerCase().includes(q) || (v.vjName || '').toLowerCase().includes(q)) : list;
     const activeVj = list.filter(v => v.beansMonth > 0).length;
+    const gradedVj = list.filter(v => v.gradeReached).length;
+    const fl = State.liveFilter || 'all';
     const totalBeans = list.reduce((a, v) => a + (v.beansMonth || 0), 0);
     return `
       <div class="page-head fade-in">
@@ -3307,9 +3367,16 @@ function renderVjLiveData() {
       <div class="search-bar" style="margin-bottom:10px;">
         ${ICONS.search}
         <input id="vjSearchInput" type="text" placeholder="ຄົ້ນຫາ BIGO ID ຫຼື ຊື່ VJ..." value="${escapeHtml(State.searchQuery)}">
-        <button class="btn btn-ghost btn-sm" onclick="fetchVjLiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');" style="flex-shrink:0; padding:6px 10px;">🔄</button>
+        <button class="btn btn-ghost btn-refresh" id="liveRefreshBtn" title="Refresh" onclick="refreshLiveDataBtn()">${ICONS.sync}</button>
       </div>
-      <div id="vjLiveList">${filtered.length ? filtered.map(vj => vjLiveCardHtml(vj)).join('') : `<div class="empty-state"><p>ບໍ່ພົບ VJ</p></div>`}</div>`;
+      <div class="chip-row" style="margin:0 0 10px;">
+        <button class="chip live-filter-chip ${fl==='all'?'active':''}" data-f="all" onclick="setLiveFilter('all')">ທັງໝົດ (${list.length})</button>
+        <button class="chip live-filter-chip ${fl==='active'?'active':''}" data-f="active" onclick="setLiveFilter('active')">🔥 ມີຖົ່ວ (${activeVj})</button>
+        <button class="chip live-filter-chip ${fl==='graded'?'active':''}" data-f="graded" onclick="setLiveFilter('graded')">🏅 ຜ່ານ Grade (${gradedVj})</button>
+        <button class="chip live-filter-chip ${fl==='new'?'active':''}" data-f="new" onclick="setLiveFilter('new')">🌟 VJ ໃໝ່</button>
+        <button class="chip live-filter-chip ${fl==='inactive'?'active':''}" data-f="inactive" onclick="setLiveFilter('inactive')">💤 ຍັງ 0 ຖົ່ວ</button>
+      </div>
+      <div id="vjLiveList">${liveListHtml(list)}</div>`;
   }
   const myId = State.myBigoId || '';
   const liveSearchId = State._liveSearchId || '';
@@ -3335,7 +3402,7 @@ function renderVjLiveData() {
     <div style="display:flex; gap:8px; margin-bottom:14px; align-items:center;">
       <div class="search-bar" style="flex:1; margin-bottom:0;">${ICONS.search}<input id="liveSearchInput" type="text" placeholder="Bigo ID..." value="${escapeHtml(liveSearchId)}" onkeydown="if(event.key==='Enter') submitLiveSearch();"></div>
       <button class="btn btn-primary btn-sm" onclick="submitLiveSearch()">ຄົ້ນຫາ</button>
-      <button class="btn btn-ghost btn-sm" onclick="_vjLiveCache=null; State._liveSearchId=liveSearchId; fetchVjLiveData(State.activeLiveMonth);">🔄</button>
+      <button class="btn btn-ghost btn-refresh" title="Refresh" onclick="invalidatePhotoIndex(); _vjLiveCache=null; State._liveSearchId=liveSearchId; fetchVjLiveData(State.activeLiveMonth, true);">${ICONS.sync}</button>
     </div>
     ${found ? vjLiveCardHtml(found) : `<div class="card" style="text-align:center; padding:40px 20px;"><div style="font-size:36px; margin-bottom:12px;">🔍</div><h3 style="margin:0 0 8px; color:var(--text-mid);">ບໍ່ພົບ Bigo ID ນີ້</h3><p style="color:var(--text-low); font-size:13px; margin:0;">ກວດສອບການສະກົດ ID ອີກຄັ້ງ ຫຼື ຕິດຕໍ່ Admin</p></div>`}
     <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="State._liveSearchId=''; render();">← ກັບໄປໜ້າຄົ້ນຫາ</button>`;
@@ -3347,22 +3414,69 @@ function submitLiveSearch() {
   if (_vjLiveCache) { render(); return; }
   fetchVjLiveData(); render();
 }
-function findPhotoUrlByBigoId(bigoId) {
-  if (!bigoId) return '';
-  const key = String(bigoId).trim().toLowerCase();
-  if (State.vjPhotos && State.vjPhotos[key]) return State.vjPhotos[key];
-  if (_vjLiveCache) {
-    const found = _vjLiveCache.find(v => String(v.bigoId).trim().toLowerCase() === key);
-    if (found && found.photoUrl) return found.photoUrl;
-  }
-  if (State.signupPhotos && State.signupPhotos[key]) return State.signupPhotos[key];
+/* ---------- Photo index: ສ້າງຄັ້ງດຽວ ຄົ້ນຫາທັນທີ (ແທນການວົນລູບ) ---------- */
+let _photoIndex = null;
+let _photoIndexSig = '';
+
+function _photoIndexSignature(){
+  // ລາຍເຊັນສັ້ນໆ: ຖ້າຂໍ້ມູນຕົ້ນທາງປ່ຽນ ລາຍເຊັນຈະປ່ຽນ → ສ້າງດັດຊະນີໃໝ່
+  return [
+    State.vjPhotos ? Object.keys(State.vjPhotos).length : 0,
+    _vjLiveCache ? _vjLiveCache.length : 0,
+    State.signupPhotos ? Object.keys(State.signupPhotos).length : 0,
+    State.months.length,
+    State.months.map(m => ((State.monthsData[m] && State.monthsData[m].vjList) || []).length).join(',')
+  ].join('|');
+}
+
+function _buildPhotoIndex(){
+  const idx = {};
+  const norm = id => String(id).trim().toLowerCase();
+
+  // ລຳດັບຄວາມສຳຄັນ (ຕ່ຳສຸດ → ສູງສຸດ): ຂຽນທັບກັນຕາມລຳດັບ ໃຫ້ຜົນເທົ່າກັບຟັງຊັນເກົ່າ
+  // ເກົ່າ: vjPhotos > live > signup > ລາຍເດືອນ(ເດືອນທຳອິດທີ່ເຈົ້າ)
+  // 4) ລາຍເດືອນ (ເດືອນທຳອິດທີ່ພົບກ່ອນ ຊະນະ)
+  const monthFirst = {};
   for (const m of State.months) {
     const list = (State.monthsData[m] && State.monthsData[m].vjList) || [];
-    for (const v of list) { if (String(v.bigoId).trim().toLowerCase() === key && v.photoUrl) return v.photoUrl; }
+    for (const v of list) {
+      if (v.photoUrl) {
+        const k = norm(v.bigoId);
+        if (!monthFirst[k]) monthFirst[k] = v.photoUrl;
+      }
+    }
   }
-  return '';
+  Object.assign(idx, monthFirst);
+
+  // 3) signupPhotos
+  if (State.signupPhotos) {
+    for (const k in State.signupPhotos) { if (State.signupPhotos[k]) idx[k] = State.signupPhotos[k]; }
+  }
+  // 2) Live data
+  if (_vjLiveCache) {
+    for (const v of _vjLiveCache) { if (v.photoUrl) idx[norm(v.bigoId)] = v.photoUrl; }
+  }
+  // 1) vjPhotos (ສຳຄັນສຸດ)
+  if (State.vjPhotos) {
+    for (const k in State.vjPhotos) { if (State.vjPhotos[k]) idx[k] = State.vjPhotos[k]; }
+  }
+  return idx;
 }
-function vjLiveCardHtml(vj) {
+
+function findPhotoUrlByBigoId(bigoId) {
+  if (!bigoId) return '';
+  const sig = _photoIndexSignature();
+  if (!_photoIndex || sig !== _photoIndexSig) {
+    _photoIndex = _buildPhotoIndex();
+    _photoIndexSig = sig;
+  }
+  return _photoIndex[String(bigoId).trim().toLowerCase()] || '';
+}
+
+// ບັງຄັບສ້າງໃໝ່ (ໃຊ້ຕອນ admin ບັນທຶກຮູບ ຫຼື Sync)
+function invalidatePhotoIndex(){ _photoIndex = null; _photoIndexSig = ''; }
+
+function vjLiveCardHtml(vj, rank) {
   const isActive = vj.beansMonth > 0 || vj.hoursMonth > 0;
   const gradePct = vj.nextBeanTarget > 0 ? Math.min(100, Math.round(vj.beansMonth / vj.nextBeanTarget * 100)) : 100;
   const hoursPct = Math.min(100, Math.round(vj.hoursMonth / vj.reqHours * 100));
@@ -3376,7 +3490,7 @@ function vjLiveCardHtml(vj) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="width:60px;height:60px;border-radius:50%;flex-shrink:0;background:linear-gradient(145deg,var(--ink-3),var(--ink));border:2px solid ${isActive ? 'var(--gold)' : 'var(--line)'};display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:20px;color:var(--text-mid);overflow:hidden;">${(() => { const purl = findPhotoUrlByBigoId(vj.bigoId); return purl ? `<img src="${escapeHtml(purl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(vj.bigoId)}</span>` : initials(vj.bigoId); })()}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(vj.vjName || vj.bigoId)}</div>
+          <div style="font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rank && vj.beansMonth > 0 ? `<span style="display:inline-block;min-width:26px;text-align:center;margin-right:6px;padding:1px 7px;border-radius:8px;font-family:var(--f-mono);font-size:11.5px;font-weight:800;background:${rank===1?'#E6A817':rank===2?'#8FA3BF':rank===3?'#C06030':'var(--ink-3)'};color:${rank<=3?'#fff':'var(--text-mid)'};">${rank<=3?['🥇','🥈','🥉'][rank-1]:'#'+rank}</span>` : ''}${escapeHtml(vj.vjName || vj.bigoId)}</div>
           <div style="font-size:11.5px;color:var(--text-low);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="mono">${escapeHtml(vj.bigoId)}</span>${statusBadge}${typeBadge}<span>👥 ${fmtInt(vj.fans)}</span></div>
         </div>
         <div style="text-align:right;flex-shrink:0;"><div style="font-family:var(--f-mono);font-weight:700;font-size:15px;color:${gradeColor};">${vj.currentGrade !== '-' ? vj.currentGrade : '—'}</div><div style="font-size:10.5px;color:var(--text-low);">Grade</div></div>
@@ -3495,7 +3609,7 @@ function renderNewVjActive(){
     <div class="search-bar" style="margin-bottom:10px;">
       ${ICONS.search}
       <input id="vjSearchInput" type="text" placeholder="ຄົ້ນຫາ Bigo ID ຫຼື ຊື່..." value="${escapeHtml(State.searchQuery)}" oninput="State.searchQuery=this.value; document.getElementById('newVjActiveList').innerHTML = renderNewVjActiveListInner();">
-      <button class="btn btn-ghost btn-sm" onclick="fetchNewVjActiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');">🔄</button>
+      <button class="btn btn-ghost btn-refresh" title="Refresh" onclick="fetchNewVjActiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');">${ICONS.sync}</button>
     </div>
     <div id="newVjActiveList">${renderNewVjActiveListInner()}</div>`;
 }

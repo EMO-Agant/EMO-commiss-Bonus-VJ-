@@ -3402,7 +3402,7 @@ function renderVjLiveData() {
     <div style="display:flex; gap:8px; margin-bottom:14px; align-items:center;">
       <div class="search-bar" style="flex:1; margin-bottom:0;">${ICONS.search}<input id="liveSearchInput" type="text" placeholder="Bigo ID..." value="${escapeHtml(liveSearchId)}" onkeydown="if(event.key==='Enter') submitLiveSearch();"></div>
       <button class="btn btn-primary btn-sm" onclick="submitLiveSearch()">ຄົ້ນຫາ</button>
-      <button class="btn btn-ghost btn-refresh" title="Refresh" onclick="invalidatePhotoIndex(); _vjLiveCache=null; State._liveSearchId=liveSearchId; fetchVjLiveData(State.activeLiveMonth, true);">${ICONS.sync}</button>
+      <button class="btn btn-ghost btn-refresh" id="liveRefreshBtn" title="Refresh" onclick="refreshLiveDataBtn()">${ICONS.sync}</button>
     </div>
     ${found ? vjLiveCardHtml(found) : `<div class="card" style="text-align:center; padding:40px 20px;"><div style="font-size:36px; margin-bottom:12px;">🔍</div><h3 style="margin:0 0 8px; color:var(--text-mid);">ບໍ່ພົບ Bigo ID ນີ້</h3><p style="color:var(--text-low); font-size:13px; margin:0;">ກວດສອບການສະກົດ ID ອີກຄັ້ງ ຫຼື ຕິດຕໍ່ Admin</p></div>`}
     <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="State._liveSearchId=''; render();">← ກັບໄປໜ້າຄົ້ນຫາ</button>`;

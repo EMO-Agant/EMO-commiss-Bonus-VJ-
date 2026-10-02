@@ -854,6 +854,7 @@ async function gasCall(fnName, ...args){
     'adminSaveVjPhone','adminDeleteVjPhone',
     'adminSaveEmoKnowledge','adminDeleteEmoKnowledge',
     'adminRecalcPkData','vjLoginByPhone',
+    'getVjLoginLogs',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -997,11 +998,29 @@ function toast(msg, type='info'){
 }
 
 let _loginPollTimer = null;
-function startLoginNotificationPolling(){
+async function startLoginNotificationPolling(){
   if(!State.isAdmin) return;
   stopLoginNotificationPolling();
+
+  // ໂຫລດລາຍການເກົ່າຈາກເຄື່ອງກ່ອນ
+  try{
+    const saved = JSON.parse(localStorage.getItem('emo_recent_logins') || 'null');
+    if(Array.isArray(saved) && !State.recentLogins.length) State.recentLogins = saved;
+  }catch(e){}
+
+  // ດຶງປະຫວັດ (ສູງສຸດ 100) ຈາກ Backend ໂດຍບໍ່ສົ່ງ sinceIso
+  try{
+    const all = await gasCall('getVjLoginLogs', State.adminPassword, '');
+    if(Array.isArray(all) && all.length){
+      State.recentLogins = all.slice().reverse().slice(0, 30);
+      State._lastLoginCheck = all[all.length-1].time;
+      try{ localStorage.setItem('emo_recent_logins', JSON.stringify(State.recentLogins)); }catch(e){}
+      const host = document.getElementById('recentLoginsHost');
+      if(host) host.innerHTML = recentLoginsHtml();
+    }
+  }catch(e){}
+
   _loginPollTimer = setInterval(checkNewVjLogins, 20000);
-  checkNewVjLogins();
 }
 function stopLoginNotificationPolling(){
   if(_loginPollTimer){ clearInterval(_loginPollTimer); _loginPollTimer = null; }
@@ -1009,18 +1028,22 @@ function stopLoginNotificationPolling(){
 async function checkNewVjLogins(){
   if(!State.isAdmin) return;
   try{
-    const logs = await gasCall('getVjLoginLogs', State._lastLoginCheck);
+    const logs = await gasCall('getVjLoginLogs', State.adminPassword, State._lastLoginCheck);
     if(logs && logs.length){
-      logs.forEach(l => {
+      const seen = new Set((State.recentLogins||[]).map(x => x.time + '|' + x.phone));
+      const fresh = logs.filter(l => !seen.has(l.time + '|' + l.phone));
+      fresh.forEach(l => {
         playLoginSound();
         toast('🔔 ' + l.vjName + ' (' + l.phone + ') ເຂົ້າສູ່ລະບົບ', 'info');
-        State.recentLogins.unshift(l);
       });
-      State.recentLogins = State.recentLogins.slice(0, 30);
+      // ໃໝ່ສຸດຢູ່ເທິງ
+      State.recentLogins = fresh.slice().reverse().concat(State.recentLogins || []).slice(0, 30);
       State._lastLoginCheck = logs[logs.length-1].time;
-      if(State.view === 'admin-dashboard') render();
+      try{ localStorage.setItem('emo_recent_logins', JSON.stringify(State.recentLogins)); }catch(e){}
+      const host = document.getElementById('recentLoginsHost');
+      if(host) host.innerHTML = recentLoginsHtml();
     }
-  }catch(e){ /* silent — ບໍ່ລົບກວນ admin ຖ້າ network ມີບັນຫາຊົ່ວຄາວ */ }
+  }catch(e){ /* silent */ }
 }
 function playLoginSound(){
   try{
@@ -2196,6 +2219,61 @@ function monthlyIncomeExpenseChartHtml(){
     </div>`;
 }
 
+/* ---------- ເວລາແບບ "ເມື່ອ X ນາທີກ່ອນ" ---------- */
+function timeAgoLao_(iso){
+  const t = new Date(iso).getTime();
+  if(!t) return '';
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if(s < 60) return 'ຫາກໍ່ເຂົ້າ';
+  const m = Math.floor(s / 60);
+  if(m < 60) return 'ເມື່ອ ' + m + ' ນາທີກ່ອນ';
+  const h = Math.floor(m / 60);
+  if(h < 24) return 'ເມື່ອ ' + h + ' ຊົ່ວໂມງກ່ອນ';
+  return 'ເມື່ອ ' + Math.floor(h / 24) + ' ມື້ກ່ອນ';
+}
+
+/* ---------- ລາຍການ VJ ເຂົ້າສູ່ລະບົບຫຼ້າສຸດ (ມີຮູບ) ---------- */
+function recentLoginsHtml(){
+  const list = State.recentLogins || [];
+  if(!list.length){
+    return `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ VJ ເຂົ້າສູ່ລະບົບ</p></div>`;
+  }
+  return list.map(l => {
+    const purl = findPhotoUrlByBigoId(l.bigoId);
+    const isFresh = (Date.now() - new Date(l.time).getTime()) < 5 * 60 * 1000;
+    const avatar = `
+      <div style="position:relative; width:56px; height:56px; flex-shrink:0;">
+        <div class="vj-avatar" style="width:56px;height:56px;overflow:hidden;${purl?'cursor:zoom-in;':''}${isFresh?'border:2px solid var(--mint);':''}"
+             ${purl?`onclick="openImageLightbox('${escapeHtml(purl)}')"`:''}>
+          ${purl
+            ? `<img src="${escapeHtml(purl)}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(l.bigoId||l.vjName)}</span>`
+            : initials(l.bigoId||l.vjName)}
+        </div>
+        ${isFresh ? `<span style="position:absolute; right:0; bottom:0; width:14px; height:14px; border-radius:50%; background:var(--mint); border:2px solid var(--ink-2); animation:pulse 1.4s infinite;"></span>` : ''}
+      </div>`;
+    return `
+      <div class="vj-row">
+        ${avatar}
+        <div class="vj-info">
+          <div class="name">${escapeHtml(l.vjName)} <span class="text-low mono" style="font-size:11px;">${escapeHtml(l.bigoId||'')}</span></div>
+          <div class="meta">📱 ${escapeHtml(l.phone)}${!purl ? ` <span style="color:var(--coral);font-weight:700;font-size:10.5px;">ບໍ່ມີຮູບ</span>` : ''}</div>
+        </div>
+        <div style="text-align:right; flex-shrink:0;">
+          <div style="font-size:12px; font-weight:700; color:${isFresh?'var(--mint)':'var(--text-mid)'};">${timeAgoLao_(l.time)}</div>
+          <div class="text-low mono" style="font-size:11px;">${new Date(l.time).toLocaleTimeString('lo-LA')}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function clearRecentLogins(){
+  State.recentLogins = [];
+  try{ localStorage.removeItem('emo_recent_logins'); }catch(e){}
+  const host = document.getElementById('recentLoginsHost');
+  if(host) host.innerHTML = recentLoginsHtml();
+  toast('ລ້າງລາຍການແລ້ວ','info');
+}
+
 function renderAdminDashboard(){
   const months = State.months;
   let allUSD=0, allBeans=0, allVjSet=new Set(), allNewVj=0;
@@ -2260,19 +2338,10 @@ function renderAdminDashboard(){
       <button class="btn btn-ghost btn-sm" onclick="runConnectionCheck()">🔍 ກວດ Google Sheet Connection</button>
       <div id="connDiagResult" style="margin-top:12px;"></div>
       <div class="flex-between" style="margin-top:24px;">
-        <h3 class="display" style="font-size:16px; margin:0;">🔔 VJ ເຂົ້າສູ່ລະບົບຫຼ້າສຸດ</h3>
+        <h3 class="display" style="font-size:16px; margin:0;">🔔 VJ ເຂົ້າສູ່ລະບົບຫຼ້າສຸດ (${(State.recentLogins||[]).length})</h3>
+        ${(State.recentLogins||[]).length ? `<button class="btn btn-ghost btn-sm" onclick="clearRecentLogins()">${ICONS.trash} ລ້າງ</button>` : ''}
       </div>
-      <div class="card" style="margin-top:10px;">
-        ${State.recentLogins.length ? State.recentLogins.map(l => `
-          <div class="vj-row">
-            <div class="vj-avatar">👤</div>
-            <div class="vj-info">
-              <div class="name">${escapeHtml(l.vjName)} <span class="text-low mono" style="font-size:11px;">${escapeHtml(l.bigoId||'')}</span></div>
-              <div class="meta">📱 ${escapeHtml(l.phone)}</div>
-            </div>
-            <div class="text-low mono" style="font-size:11px;">${new Date(l.time).toLocaleTimeString('lo-LA')}</div>
-          </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ VJ ເຂົ້າສູ່ລະບົບ</p></div>`}
-      </div>
+      <div class="card" style="margin-top:10px; padding:8px;" id="recentLoginsHost">${recentLoginsHtml()}</div>
     </div>`;
 }
 

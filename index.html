@@ -1095,9 +1095,10 @@ async function uploadPhotoToDrive(fileInputEl, targetInputId, previewImgId){
 }
 function friendlyUploadError(err){
   const m = (err && err.message) || '';
-  if(/DriveApp|ไม่ได้รับอนุญาต|permission|Authorization/i.test(m))
-    return 'Script ຍັງບໍ່ໄດ້ຮັບສິດ Drive — ໃຫ້ແລ່ນ authorizeAll ໃນ Apps Script ແລ້ວ Deploy version ໃໝ່';
-  if(/UNAUTHORIZED/.test(m)) return 'ລະຫັດ Admin ໝົດອາຍຸ — ກະລຸນາ Login ໃໝ່';
+  if(/UNAUTHORIZED/.test(m)) return 'ລະຫັດ Admin ບໍ່ຖືກຕ້ອງ ຫຼື ໝົດອາຍຸ — ກະລຸນາ Login ໃໝ່';
+  if(/Required permissions|not sufficient|permission/i.test(m))
+    return 'Script ຍັງບໍ່ໄດ້ຮັບສິດ — ແກ້ appsscript.json, ແລ່ນ authorizeAll ແລ້ວ Deploy version ໃໝ່ | ' + m.slice(0,90);
+  if(/ເຊື່ອມຕໍ່ API/.test(m)) return m;
   return m || 'ອັບໂຫລດຮູບບໍ່ສຳເລັດ';
 }
 

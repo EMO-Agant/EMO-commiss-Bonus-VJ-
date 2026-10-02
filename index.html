@@ -671,7 +671,7 @@ const State = {
   monthsData: {},
   activeMonth: null,
   myBigoId: localStorage.getItem('emo_my_bigoid') || '',
-  vjSession: null,
+  vjSession: JSON.parse(localStorage.getItem('emo_vj_session') || 'null'),
   signupPhotos: {},
   vjPhotos: {},
   liveFilter: 'all',
@@ -1057,34 +1057,48 @@ function playLoginSound(){
   }catch(e){}
 }
 
+async function compressImageToBase64(file, maxSide = 1280, quality = 0.85){
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * scale);
+  c.height = Math.round(bmp.height * scale);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', quality).split(',')[1];
+}
+
 async function uploadPhotoToDrive(fileInputEl, targetInputId, previewImgId){
   const file = fileInputEl.files[0];
   if(!file) return;
   if(!file.type.startsWith('image/')){ toast('ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ','error'); return; }
-  if(file.size > 8*1024*1024){ toast('ຮູບໃຫຍ່ເກີນໄປ (ສູງສຸດ 8MB)','error'); return; }
+  if(file.size > 15*1024*1024){ toast('ຮູບໃຫຍ່ເກີນໄປ (ສູງສຸດ 15MB)','error'); return; }
   toast('ກຳລັງອັບໂຫລດຮູບ ກະລຸນາລໍຖ້າ...', 'info');
-  const reader = new FileReader();
-  reader.onload = async function(e){
-    const base64 = e.target.result.split(',')[1];
-    try{
-      const res = await gasCall('adminUploadPhotoToDrive', State.adminPassword, base64, file.name, file.type);
-      const target = document.getElementById(targetInputId);
-      if(target){
-        target.value = res.url;
-        target.dispatchEvent(new Event('input'));
-        target.dispatchEvent(new Event('change'));
-      }
-      if(previewImgId){
-        const img = document.getElementById(previewImgId);
-        if(img){ img.src = res.url; img.style.display = 'block'; }
-      }
-      toast('ອັບໂຫລດຮູບສຳເລັດ ✓','success');
-    }catch(err){
-      toast(err.message || 'ອັບໂຫລດຮູບບໍ່ສຳເລັດ','error');
+  try{
+    const base64 = await compressImageToBase64(file);
+    const safeName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    const res = await gasCall('adminUploadPhotoToDrive', State.adminPassword, base64, safeName, 'image/jpeg');
+    const target = document.getElementById(targetInputId);
+    if(target){
+      target.value = res.url;
+      target.dispatchEvent(new Event('input'));
+      target.dispatchEvent(new Event('change'));
     }
-    fileInputEl.value = '';
-  };
-  reader.readAsDataURL(file);
+    if(previewImgId){
+      const img = document.getElementById(previewImgId);
+      if(img){ img.src = res.url; img.style.display = 'block'; }
+    }
+    toast('ອັບໂຫລດຮູບສຳເລັດ ✓','success');
+  }catch(err){
+    toast(friendlyUploadError(err),'error');
+  }
+  fileInputEl.value = '';
+}
+function friendlyUploadError(err){
+  const m = (err && err.message) || '';
+  if(/DriveApp|ไม่ได้รับอนุญาต|permission|Authorization/i.test(m))
+    return 'Script ຍັງບໍ່ໄດ້ຮັບສິດ Drive — ໃຫ້ແລ່ນ authorizeAll ໃນ Apps Script ແລ້ວ Deploy version ໃໝ່';
+  if(/UNAUTHORIZED/.test(m)) return 'ລະຫັດ Admin ໝົດອາຍຸ — ກະລຸນາ Login ໃໝ່';
+  return m || 'ອັບໂຫລດຮູບບໍ່ສຳເລັດ';
 }
 
 /* ============================================================================
@@ -1265,11 +1279,12 @@ function renderShell(){
   } else {
     dh += `<div class="drawer-divider"></div><button class="drawer-link" onclick="setView('admin-login'); closeDrawer();">${ICONS.lock}ເຂົ້າສູ່ລະບົບ Admin</button>`;
   }
+  dh += `<div class="drawer-divider"></div><button class="drawer-link" onclick="vjSessionLogout()">${ICONS.logout}ອອກຈາກລະບົບ VJ</button>`;
   drawerLinks.innerHTML = dh;
 }
 function sideLinkHtml(n){
   const active = State.view === n.id ? 'active' : '';
-  return `<button class="side-link ${active}" onclick="setView('${n.id}')"><span style="font-size:16px;margin-right:2px;">${n.icon}${n.label}</button>`;
+  return `<button class="side-link ${active}" onclick="setView('${n.id}')"><span style="font-size:16px;margin-right:2px;">${n.icon}</span>${n.label}</button>`;
 }
 function tabItemHtml(n){
   const active = State.view === n.id ? 'active' : '';
@@ -1280,7 +1295,7 @@ function tabItemHtml(n){
 }
 function drawerLinkHtml(n){
   const active = State.view === n.id ? 'active' : '';
-  return `<button class="drawer-link ${active}" onclick="setView('${n.id}'); closeDrawer();"><span style="font-size:16px;margin-right:2px;">${n.icon}${n.label}</button>`;
+  return `<button class="drawer-link ${active}" onclick="setView('${n.id}'); closeDrawer();"><span style="font-size:16px;margin-right:2px;">${n.icon}</span>${n.label}</button>`;
 }
 function openDrawer(){ document.getElementById('overlay').classList.add('show'); document.getElementById('drawer').classList.add('show'); }
 function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); document.getElementById('drawer').classList.remove('show'); }
@@ -1336,6 +1351,7 @@ function render(){
   const titles = {
     home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',newvjactive:'VJ ໃໝ່ Active',cashbonus:'ໂບນັດເງິນສົດ',
     leaderboard:'ອັນດັບ VJ',emo:'ນ້ອງ EMO',lookup:'ຄົ້ນຫາ VJ',
+    pk:'PK Battle', pkfamily:'PK Family 3v3', 'admin-pk':'ຈັດການ PK', 'admin-pkfamily':'ຈັດການ PK Family', 'admin-vjphone':'ຈັດການເບີໂທ VJ', 'admin-manage-admins':'ຈັດການ Admin',
     'admin-login':'ເຂົ້າສູ່ລະບົບ Admin', 'admin-dashboard':'ພາບລວມ Admin',
     'admin-months':'ຈັດການເດືອນ', 'admin-vj':'ຈັດການ VJ', 'admin-banners':'ຈັດການແບນເນີ້', 'admin-summary':'ສະຫຼຸບ Agency','admin-emo-kb':'ຈັດການຄວາມຮູ້ ນ້ອງ EMO','admin-settings':'ຕັ້ງຄ່າ & ສີ',
   };
@@ -1946,7 +1962,7 @@ function renderBonus(){
           <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:${i===0?'linear-gradient(145deg,var(--gold),#c98f1c)':'linear-gradient(145deg,var(--ink),var(--ink-3))'};border:1px solid ${i===0?'rgba(245,184,46,0.5)':'var(--line)'};display:flex;align-items:center;justify-content:center;font-size:18px;">${i===0?'🥇':'📅'}</div>
           <div style="flex:1; min-width:0;">
             <div style="font-weight:700; font-size:14.5px;">${escapeHtml(h.label)}</div>
-            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>📅 ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span>></div>
+            <div style="font-size:11.5px; color:var(--text-low); margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">${tierBadgeHtml(h.vj.ticketLevel)}<span>${BEAN_IMG} ${fmtInt(h.vj.sbeans)}</span><span>📅 ${fmtInt(h.vj.validDay)} ມື້</span><span>🕐 ${Number(h.vj.validHour||0).toFixed(1)} ຊ.ມ.</span></div>
           </div>
           <div style="text-align:right; flex-shrink:0;"><div style="font-family:var(--f-mono); font-weight:800; font-size:16px; color:${i===0?'var(--gold)':'var(--text-hi)'};">$${fmtMoney(h.vj.bonusVjUSD)}</div><div style="font-size:10.5px; color:var(--text-low); margin-top:1px;">+${fmtInt(h.vj.bonusBeansTotal)} beans</div></div>
         </div>`).join('')}
@@ -2118,6 +2134,7 @@ async function submitVjPhoneLogin(){
     const res = await gasCall('vjLoginByPhone', phone);
     if(res && res.ok){
       State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId };
+      localStorage.setItem('emo_vj_session', JSON.stringify(State.vjSession));
       document.body.classList.remove('pre-login');
       toast('ຍິນດີຕ້ອນຮັບ ' + res.vjName, 'success');
       bootApp();
@@ -2718,26 +2735,23 @@ function quickUploadVjPhoto(bigoId){
   if(!bigoId){ toast('VJ ຄົນນີ້ບໍ່ມີ Bigo ID — ໃສ່ Bigo ID ກ່ອນ','error'); return; }
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
-  inp.onchange = () => {
+  inp.onchange = async () => {
     const file = inp.files[0]; if(!file) return;
     if(!file.type.startsWith('image/')){ toast('ກະລຸນາເລືອກໄຟລ໌ຮູບ','error'); return; }
-    if(file.size > 8*1024*1024){ toast('ຮູບໃຫຍ່ເກີນ 8MB','error'); return; }
+    if(file.size > 15*1024*1024){ toast('ຮູບໃຫຍ່ເກີນ 15MB','error'); return; }
     toast('ກຳລັງອັບໂຫລດຮູບ...','info');
-    const reader = new FileReader();
-    reader.onload = async e => {
-      try{
-        const base64 = e.target.result.split(',')[1];
-        const up = await gasCall('adminUploadPhotoToDrive', State.adminPassword, base64, file.name, file.type);
-        await gasCall('adminSaveVjPhoto', State.adminPassword, bigoId, up.url);
-        if(!State.vjPhotos) State.vjPhotos = {};
-        State.vjPhotos[String(bigoId).trim().toLowerCase()] = up.url;
-        invalidatePhotoIndex();
-        toast('ບັນທຶກຮູບສຳເລັດ ✓','success');
-        const host = document.getElementById('vjPhoneList');
-        if(host) host.innerHTML = renderVjPhoneListInner();
-      }catch(err){ toast(err.message || 'ອັບໂຫລດບໍ່ສຳເລັດ','error'); }
-    };
-    reader.readAsDataURL(file);
+    try{
+      const base64 = await compressImageToBase64(file);
+      const safeName = String(bigoId).replace(/[^\w\-]/g,'_') + '.jpg';
+      const up = await gasCall('adminUploadPhotoToDrive', State.adminPassword, base64, safeName, 'image/jpeg');
+      await gasCall('adminSaveVjPhoto', State.adminPassword, bigoId, up.url);
+      if(!State.vjPhotos) State.vjPhotos = {};
+      State.vjPhotos[String(bigoId).trim().toLowerCase()] = up.url;
+      invalidatePhotoIndex();
+      toast('ບັນທຶກຮູບສຳເລັດ ✓','success');
+      const host = document.getElementById('vjPhoneList');
+      if(host) host.innerHTML = renderVjPhoneListInner();
+    }catch(err){ toast(friendlyUploadError(err),'error'); }
   };
   inp.click();
 }
@@ -4710,6 +4724,127 @@ async function submitResetPkFamily(){
     closeModal();
     setView('admin-pkfamily');
   }catch(e){ toast(e.message||'ລ້າງບໍ່ສຳເລັດ','error'); }
+}
+/* ============================================================================
+   ADMIN — ຟອມເບີໂທ VJ
+============================================================================ */
+function openVjPhoneFormModal(v){
+  const isEdit = !!v; v = v || {};
+  openModal(`
+    <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂ VJ':'ເພີ່ມ VJ'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <form id="vjPhoneForm">
+      <div class="field"><label>Bigo ID *</label><input data-key="bigoId" type="text" value="${escapeHtml(v.bigoId||'')}"></div>
+      <div class="field"><label>ຊື່ VJ *</label><input data-key="vjName" type="text" value="${escapeHtml(v.vjName||'')}"></div>
+      <div class="field"><label>ເບີໂທ *</label><input data-key="phone" type="tel" value="${escapeHtml(v.phone||'')}"></div>
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitVjPhoneForm(${isEdit?v.rowIndex:-1})">${ICONS.check} ບັນທຶກ</button>
+    </div>`);
+}
+async function submitVjPhoneForm(rowIndex){
+  const payload = {};
+  document.querySelectorAll('#vjPhoneForm [data-key]').forEach(i => payload[i.dataset.key] = i.value.trim());
+  if(!payload.bigoId || !payload.vjName || !payload.phone){ toast('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ','error'); return; }
+  if(rowIndex > 1) payload.rowIndex = rowIndex;
+  try{
+    await gasCall('adminSaveVjPhone', State.adminPassword, payload);
+    toast('ບັນທຶກສຳເລັດ','success');
+    closeModal();
+    _vjPhoneCache = null;
+    fetchVjPhoneList();
+  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+function confirmDeleteVjPhone(rowIndex, name){
+  openModal(`
+    <div class="modal-head"><h3>ລຶບ VJ?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <p class="text-low">ລຶບ <b style="color:var(--text-hi);">${escapeHtml(name||'')}</b> ອອກຈາກລະບົບ login? ບໍ່ສາມາດກູ້ຄືນໄດ້.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-danger" onclick="submitDeleteVjPhone(${rowIndex})">${ICONS.trash} ລຶບເລີຍ</button>
+    </div>`);
+}
+
+/* ============================================================================
+   ADMIN — ຈັດການ Admin (CEO ເທົ່ານັ້ນ)
+============================================================================ */
+let _adminListCache = null;
+async function fetchAdminList(){
+  try{ _adminListCache = await gasCall('adminGetAdminList', State.adminPassword); }
+  catch(e){ toast(e.message || 'ໂຫລດບໍ່ສຳເລັດ','error'); _adminListCache = []; }
+  if(State.view === 'admin-manage-admins'){ document.getElementById('main').innerHTML = renderAdminManageAdmins(); }
+}
+function renderAdminManageAdmins(){
+  if(_adminListCache === null){ fetchAdminList(); return skeletonHtml(); }
+  const list = _adminListCache;
+  return `
+    <div class="page-head fade-in">
+      <p class="eyebrow">Admin</p>
+      <h1>👤 ຈັດການ Admin</h1>
+      <p>ເພີ່ມ/ແກ້ໄຂ/ລຶບ ບັນຊີ Manager ແລະ Admin — ${list.length} ຄົນ</p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openAdminFormModal(null)">${ICONS.plus} ເພີ່ມ Admin</button>
+    <div class="card" style="padding:8px; margin-top:12px;">
+      ${list.length ? list.map(a => `
+        <div class="vj-row">
+          <div class="vj-avatar">${initials(a.name)}</div>
+          <div class="vj-info">
+            <div class="name">${escapeHtml(a.name)}</div>
+            <div class="meta"><span class="chip">${escapeHtml(a.role)}</span></div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="icon-btn" onclick="openAdminFormModal(${a.rowIndex})">${ICONS.edit}</button>
+            <button class="icon-btn" style="color:var(--coral);" onclick="confirmDeleteAdmin(${a.rowIndex})">${ICONS.trash}</button>
+          </div>
+        </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ Admin ເພີ່ມເຕີມ</p></div>`}
+    </div>`;
+}
+function openAdminFormModal(rowIndex){
+  const a = rowIndex ? (_adminListCache||[]).find(x => x.rowIndex === rowIndex) || {} : {};
+  openModal(`
+    <div class="modal-head"><h3>${rowIndex?'ແກ້ໄຂ Admin':'ເພີ່ມ Admin'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <form id="adminForm">
+      <div class="field"><label>ຊື່ *</label><input data-key="name" type="text" value="${escapeHtml(a.name||'')}"></div>
+      <div class="field"><label>ລະຫັດຜ່ານ *</label><input data-key="password" type="text" value="${escapeHtml(a.password||'')}"></div>
+      <div class="field"><label>ສິດ</label>
+        <select data-key="role">${['Admin','Manager','CEO'].map(r=>`<option value="${r}" ${(a.role||'Admin')===r?'selected':''}>${r}</option>`).join('')}</select>
+      </div>
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" onclick="submitAdminForm(${rowIndex||-1})">${ICONS.check} ບັນທຶກ</button>
+    </div>`);
+}
+async function submitAdminForm(rowIndex){
+  const payload = {};
+  document.querySelectorAll('#adminForm [data-key]').forEach(i => payload[i.dataset.key] = i.value.trim());
+  if(!payload.name || !payload.password){ toast('ກະລຸນາປ້ອນຊື່ ແລະ ລະຫັດຜ່ານ','error'); return; }
+  if(rowIndex > 1) payload.rowIndex = rowIndex;
+  try{
+    await gasCall('adminSaveAdminAccount', State.adminPassword, payload);
+    toast('ບັນທຶກສຳເລັດ','success');
+    closeModal();
+    _adminListCache = null;
+    fetchAdminList();
+  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+}
+function confirmDeleteAdmin(rowIndex){
+  openModal(`
+    <div class="modal-head"><h3>ລຶບ Admin?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
+    <p class="text-low">ການກະທຳນີ້ບໍ່ສາມາດກູ້ຄືນໄດ້.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-danger" onclick="submitDeleteAdmin(${rowIndex})">${ICONS.trash} ລຶບເລີຍ</button>
+    </div>`);
+}
+async function submitDeleteAdmin(rowIndex){
+  try{
+    await gasCall('adminDeleteAdminAccount', State.adminPassword, rowIndex);
+    toast('ລຶບສຳເລັດ','success');
+    closeModal();
+    _adminListCache = null;
+    fetchAdminList();
+  }catch(err){ toast(err.message || 'ລຶບບໍ່ສຳເລັດ','error'); }
 }
 </script>
 <script>

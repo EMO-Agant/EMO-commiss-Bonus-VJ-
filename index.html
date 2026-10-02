@@ -2125,17 +2125,6 @@ function renderVjPhoneLogin(themeOverride){
       </div>
     </div>`;
 }
-
-function getDeviceId_(){
-  let id = null;
-  try{ id = localStorage.getItem('emo_device_id'); }catch(e){}
-  if(!id){
-    id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
-    try{ localStorage.setItem('emo_device_id', id); }catch(e){}
-  }
-  return id;
-}
-
 async function submitVjPhoneLogin(){
   const input = document.getElementById('vjPhoneInput');
   const phone = input.value.trim();
@@ -2143,7 +2132,7 @@ async function submitVjPhoneLogin(){
   const btn = document.getElementById('vjPhoneLoginBtn');
   if(btn){ btn.disabled = true; btn.textContent = 'ກຳລັງກວດສອບ...'; }
   try{
-    const res = await gasCall('vjLoginByPhone', phone, getDeviceId_());
+    const res = await gasCall('vjLoginByPhone', phone);
     if(res && res.ok){
       State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId };
       localStorage.setItem('emo_vj_session', JSON.stringify(State.vjSession));
@@ -4815,11 +4804,9 @@ function openAdminFormModal(rowIndex){
   const a = rowIndex ? (_adminListCache||[]).find(x => x.rowIndex === rowIndex) || {} : {};
   openModal(`
     <div class="modal-head"><h3>${rowIndex?'ແກ້ໄຂ Admin':'ເພີ່ມ Admin'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <form id="adminForm" autocomplete="off">
+    <form id="adminForm">
       <div class="field"><label>ຊື່ *</label><input data-key="name" type="text" value="${escapeHtml(a.name||'')}"></div>
-      <div class="field"><label>ລະຫັດຜ່ານ ${rowIndex?'(ເວັ້ນວ່າງ = ບໍ່ປ່ຽນ)':'*'}</label>
-        <input data-key="password" type="password" autocomplete="new-password" value="" placeholder="${rowIndex?'••••••••':'ຢ່າງໜ້ອຍ 4 ໂຕອັກສອນ'}">
-      </div>
+      <div class="field"><label>ລະຫັດຜ່ານ *</label><input data-key="password" type="text" value="${escapeHtml(a.password||'')}"></div>
       <div class="field"><label>ສິດ</label>
         <select data-key="role">${['Admin','Manager','CEO'].map(r=>`<option value="${r}" ${(a.role||'Admin')===r?'selected':''}>${r}</option>`).join('')}</select>
       </div>
@@ -4832,8 +4819,7 @@ function openAdminFormModal(rowIndex){
 async function submitAdminForm(rowIndex){
   const payload = {};
   document.querySelectorAll('#adminForm [data-key]').forEach(i => payload[i.dataset.key] = i.value.trim());
-  const isNew = !(rowIndex > 1);
-  if(!payload.name || (isNew && !payload.password)){ toast('ກະລຸນາປ້ອນຊື່ ແລະ ລະຫັດຜ່ານ','error'); return; }
+  if(!payload.name || !payload.password){ toast('ກະລຸນາປ້ອນຊື່ ແລະ ລະຫັດຜ່ານ','error'); return; }
   if(rowIndex > 1) payload.rowIndex = rowIndex;
   try{
     await gasCall('adminSaveAdminAccount', State.adminPassword, payload);

@@ -851,6 +851,9 @@ async function gasCall(fnName, ...args){
     'getEmoExtraKnowledgeList',
     'adminGetVjPhoneList',
     'adminGetAdminList',
+    'adminSaveVjPhone','adminDeleteVjPhone',
+    'adminSaveEmoKnowledge','adminDeleteEmoKnowledge',
+    'adminRecalcPkData','vjLoginByPhone',
   ]);
   const isWrite = WRITE_ACTIONS.has(fnName);
 
@@ -2543,13 +2546,38 @@ async function fetchVjPhoneList(){
   if(State.view === 'admin-vjphone'){ document.getElementById('main').innerHTML = renderAdminVjPhone(); afterRenderHook(); }
 }
 
+/* ---------- helpers ສຳລັບໜ້າເບີໂທ VJ ---------- */
+function normPhoneFE_(p){ return String(p||'').replace(/[^0-9]/g,'').replace(/^0+/,''); }
+
+function getPhoneStats_(){
+  const list = _vjPhoneCache || [];
+  const phoneCount = {};
+  list.forEach(v => { const k = normPhoneFE_(v.phone); if(k) phoneCount[k] = (phoneCount[k]||0)+1; });
+  let noPhoto=0, never=0, dup=0;
+  list.forEach(v=>{
+    if(!findPhotoUrlByBigoId(v.bigoId)) noPhoto++;
+    if(!v.lastLogin) never++;
+    if(phoneCount[normPhoneFE_(v.phone)] > 1) dup++;
+  });
+  return { total:list.length, noPhoto, never, dup, phoneCount };
+}
+
+function setPhoneFilter(f){
+  State.phoneFilter = f;
+  const host = document.getElementById('vjPhoneList');
+  if(host) host.innerHTML = renderVjPhoneListInner();
+  document.querySelectorAll('.phone-filter-chip').forEach(el => el.classList.toggle('active', el.dataset.f === f));
+}
+
 function renderAdminVjPhone(){
   if(_vjPhoneCache === null){ fetchVjPhoneList(); return skeletonHtml(); }
+  const st = getPhoneStats_();
+  const fl = State.phoneFilter || 'all';
   return `
     <div class="page-head fade-in">
       <p class="eyebrow">Admin</p>
       <h1>📱 ຈັດການເບີໂທ VJ (Login)</h1>
-      <p>ຈັດການລາຍຊື່ ຊື່ VJ ແລະ ເບີໂທ ສຳລັບເຂົ້າສູ່ລະບົບ — ${(_vjPhoneCache||[]).length} ຄົນ</p>
+      <p>ຈັດການລາຍຊື່ ຊື່ VJ ແລະ ເບີໂທ ສຳລັບເຂົ້າສູ່ລະບົບ — ${st.total} ຄົນ</p>
     </div>
     <div class="card-row" style="margin:14px 0; gap:10px;">
       <div class="search-bar" style="flex:1; margin-bottom:0;">
@@ -2558,169 +2586,101 @@ function renderAdminVjPhone(){
       </div>
       <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="openVjPhoneFormModal(null)">${ICONS.plus} ເພີ່ມ VJ</button>
     </div>
+    <div class="chip-row" style="margin:0 0 10px;">
+      <button class="chip phone-filter-chip ${fl==='all'?'active':''}" data-f="all" onclick="setPhoneFilter('all')">ທັງໝົດ (${st.total})</button>
+      <button class="chip phone-filter-chip ${fl==='nophoto'?'active':''}" data-f="nophoto" onclick="setPhoneFilter('nophoto')">📷 ບໍ່ມີຮູບ (${st.noPhoto})</button>
+      <button class="chip phone-filter-chip ${fl==='never'?'active':''}" data-f="never" onclick="setPhoneFilter('never')">💤 ຍັງບໍ່ເຄີຍເຂົ້າ (${st.never})</button>
+      <button class="chip phone-filter-chip ${fl==='dup'?'active':''}" data-f="dup" onclick="setPhoneFilter('dup')">⚠️ ເບີຊ້ຳ (${st.dup})</button>
+    </div>
     <div class="card" id="vjPhoneList" style="padding:8px;">${renderVjPhoneListInner()}</div>`;
-}
-
-let _adminListCache = null;
-async function fetchAdminList(){
-  try{ _adminListCache = await gasCall('adminGetAdminList', State.adminPassword); }
-  catch(e){ toast(e.message || 'ໂຫລດລາຍຊື່ Admin ບໍ່ສຳເລັດ','error'); _adminListCache = []; }
-  if(State.view === 'admin-manage-admins'){ document.getElementById('main').innerHTML = renderAdminManageAdmins(); afterRenderHook(); }
-}
-function renderAdminManageAdmins(){
-  if(_adminListCache === null){ fetchAdminList(); return skeletonHtml(); }
-  const list = _adminListCache || [];
-  const roleBadge = r => {
-    const c = r==='CEO' ? {bg:'rgba(245,184,46,0.15)',color:'var(--gold)'} : r==='Manager' ? {bg:'rgba(45,212,168,0.15)',color:'var(--mint)'} : {bg:'rgba(111,183,255,0.15)',color:'var(--ice)'};
-    return `<span style="background:${c.bg};color:${c.color};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">${r}</span>`;
-  };
-  return `
-    <div class="page-head fade-in">
-      <p class="eyebrow">Admin</p>
-      <h1>👤 ຈັດການ Admin</h1>
-      <p>ຈັດການບັນຊີ Admin ແລະ ກຳນົດລະດັບສິດເຂົ້າເຖິງລະບົບ — ${list.length} ຄົນ</p>
-    </div>
-    <div class="card" style="margin-bottom:14px; background:rgba(245,184,46,0.06); border-color:rgba(245,184,46,0.25);">
-      <p style="font-size:12.5px; color:var(--text-mid); margin:0; line-height:1.7;">
-        👑 <b>CEO</b> — ເຂົ້າໄດ້ທຸກໜ້າ (ພາບລວມ, ຈັດການເດືອນ, ຕັ້ງຄ່າ&ສີ, ຈັດການ Admin ແລະ ອື່ນໆ)<br>
-        👔 <b>Manager</b> — ເບິ່ງ/ຈັດການ VJ, PK, ແບນເນີ້, ເບີໂທ, ຄວາມຮູ້ EMO (ບໍ່ເຫັນພາບລວມ/ຕັ້ງຄ່າ)<br>
-        🧑‍💼 <b>Admin</b> — ຈັດການ VJ, PK, ແບນເນີ້, ເບີໂທ, ຄວາມຮູ້ EMO (ຄືກັນ Manager)
-      </p>
-    </div>
-    <button class="btn btn-primary btn-sm" onclick="openAdminAccountFormModal(null)">${ICONS.plus} ເພີ່ມ Admin ໃໝ່</button>
-    <div class="section-label">ລາຍຊື່ Admin</div>
-    <div class="card" style="padding:8px;">
-      ${list.length ? list.map(a => `
-        <div class="vj-row">
-          <div class="vj-avatar">${initials(a.name)}</div>
-          <div class="vj-info">
-            <div class="name">${escapeHtml(a.name)}</div>
-            <div class="meta">${roleBadge(a.role)} <span class="mono text-low">••••••••</span></div>
-          </div>
-          <div style="display:flex; gap:4px;">
-            <button class="icon-btn" onclick='openAdminAccountFormModal(${JSON.stringify(a).replace(/'/g,"&#39;")})'>${ICONS.edit}</button>
-            <button class="icon-btn" style="color:var(--coral);" onclick="confirmDeleteAdminAccount(${a.rowIndex}, '${escapeHtml(a.name)}')">${ICONS.trash}</button>
-          </div>
-        </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>ຍັງບໍ່ມີ Admin ເພີ່ມເຕີມ — ໃຊ້ Master Password ໄດ້ໃນຖານະ CEO</p></div>`}
-    </div>`;
-}
-function openAdminAccountFormModal(a){
-  const isEdit = !!a;
-  a = a || {};
-  openModal(`
-    <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂ Admin':'ເພີ່ມ Admin ໃໝ່'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <form id="adminAccountForm">
-      <div class="field"><label>ຊື່ *</label><input data-key="name" type="text" value="${escapeHtml(a.name||'')}" required></div>
-      <div class="field"><label>ລະຫັດຜ່ານ *</label><input data-key="password" type="text" value="${escapeHtml(a.password||'')}" required></div>
-      <div class="field">
-        <label>ສິດເຂົ້າເຖິງ *</label>
-        <select data-key="role">
-          <option value="CEO" ${a.role==='CEO'?'selected':''}>👑 CEO (ເຫັນທຸກຢ່າງ)</option>
-          <option value="Manager" ${a.role==='Manager'?'selected':''}>👔 Manager</option>
-          <option value="Admin" ${(!a.role||a.role==='Admin')?'selected':''}>🧑‍💼 Admin</option>
-        </select>
-      </div>
-    </form>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
-      <button class="btn btn-primary" onclick="submitAdminAccountForm(${isEdit?a.rowIndex:-1})">${ICONS.check} ບັນທຶກ</button>
-    </div>`);
-}
-async function submitAdminAccountForm(rowIndex){
-  const inputs = document.querySelectorAll('#adminAccountForm [data-key]');
-  const payload = {};
-  inputs.forEach(inp => payload[inp.dataset.key] = inp.value.trim());
-  if(!payload.name || !payload.password){ toast('ກະລຸນາປ້ອນຊື່ ແລະ ລະຫັດຜ່ານ','error'); return; }
-  if(rowIndex && rowIndex > 1) payload.rowIndex = rowIndex;
-  try{
-    await gasCall('adminSaveAdminAccount', State.adminPassword, payload);
-    toast('ບັນທຶກສຳເລັດ','success');
-    closeModal();
-    _adminListCache = null;
-    fetchAdminList();
-  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
-}
-function confirmDeleteAdminAccount(rowIndex, name){
-  openModal(`
-    <div class="modal-head"><h3>ລຶບ Admin?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <p class="text-low">ລຶບບັນຊີ <b style="color:var(--text-hi);">${escapeHtml(name)}</b> ຖາວອນ.</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
-      <button class="btn btn-danger" onclick="submitDeleteAdminAccount(${rowIndex})">${ICONS.trash} ລຶບເລີຍ</button>
-    </div>`);
-}
-async function submitDeleteAdminAccount(rowIndex){
-  try{
-    await gasCall('adminDeleteAdminAccount', State.adminPassword, rowIndex);
-    toast('ລຶບສຳເລັດ','success');
-    closeModal();
-    _adminListCache = null;
-    fetchAdminList();
-  }catch(err){ toast(err.message || 'ລຶບບໍ່ສຳເລັດ','error'); }
 }
 
 function renderVjPhoneListInner(){
   const q = (State.searchQuery||'').trim().toLowerCase();
+  const fl = State.phoneFilter || 'all';
+  const st = getPhoneStats_();
   let list = _vjPhoneCache || [];
   if(q) list = list.filter(v => String(v.bigoId).toLowerCase().includes(q) || String(v.vjName).toLowerCase().includes(q) || String(v.phone).includes(q));
+  if(fl==='nophoto') list = list.filter(v => !findPhotoUrlByBigoId(v.bigoId));
+  if(fl==='never')   list = list.filter(v => !v.lastLogin);
+  if(fl==='dup')     list = list.filter(v => st.phoneCount[normPhoneFE_(v.phone)] > 1);
   if(!list.length) return `<div class="empty-state" style="padding:24px;"><p>ບໍ່ພົບຂໍ້ມູນ</p></div>`;
+
   const now = Date.now();
   return list.map(v => {
     const lastLoginMs = v.lastLogin ? new Date(v.lastLogin).getTime() : 0;
-    const isOnline = lastLoginMs && (now - lastLoginMs) < 5*60*1000; // ອອນລາຍ = ເຂົ້າພາຍໃນ 5 ນາທີລ່າສຸດ
+    const isRecent = lastLoginMs && (now - lastLoginMs) < 5*60*1000;
     const lastLoginLabel = lastLoginMs ? new Date(v.lastLogin).toLocaleString('lo-LA') : 'ຍັງບໍ່ເຄີຍເຂົ້າ';
+    const purl = findPhotoUrlByBigoId(v.bigoId);
+    const isDup = st.phoneCount[normPhoneFE_(v.phone)] > 1;
+    const avatar = `
+      <div style="position:relative; width:56px; height:56px; flex-shrink:0;">
+        <div class="vj-avatar" style="width:56px;height:56px;overflow:hidden;${purl?'cursor:zoom-in;':''}${!purl?'border:2px dashed var(--coral);':''}"
+             ${purl?`onclick="openImageLightbox('${escapeHtml(purl)}')"`:''}>
+          ${purl
+            ? `<img src="${escapeHtml(purl)}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(v.bigoId||v.vjName)}</span>`
+            : initials(v.bigoId||v.vjName)}
+        </div>
+        <button title="${purl?'ປ່ຽນຮູບ':'ເພີ່ມຮູບ'}" onclick="event.stopPropagation(); quickUploadVjPhoto('${escapeHtml(v.bigoId||'')}')"
+          style="position:absolute; right:-4px; bottom:-4px; width:22px; height:22px; border-radius:50%; border:2px solid var(--ink-2); background:${purl?'var(--ink-3)':'var(--gold)'}; font-size:11px; line-height:1; padding:0; display:flex; align-items:center; justify-content:center;">📷</button>
+      </div>`;
     return `
     <div class="vj-row">
-      <div class="vj-avatar">${initials(v.bigoId||v.vjName)}</div>
+      ${avatar}
       <div class="vj-info">
         <div class="name">${escapeHtml(v.vjName)} <span class="text-low mono" style="font-size:11px;">${escapeHtml(v.bigoId||'')}</span></div>
-        <div class="meta">📱 ${escapeHtml(v.phone)} · <span class="online-badge ${isOnline?'on':'off'}">${isOnline?'🟢 ອອນລາຍ':'⚪ '+escapeHtml(lastLoginLabel)}</span></div>
+        <div class="meta">
+          📱 ${escapeHtml(v.phone)}
+          ${isDup ? `<span style="color:var(--coral);font-weight:700;">⚠️ ເບີຊ້ຳ</span>` : ''}
+          <span class="online-badge ${isRecent?'on':'off'}">${isRecent?'🟢 ຫາກໍ່ເຂົ້າ':'⚪ '+escapeHtml(lastLoginLabel)}</span>
+          ${!purl ? `<span style="color:var(--coral);font-size:10.5px;font-weight:700;">ບໍ່ມີຮູບ</span>` : ''}
+        </div>
       </div>
       <div style="display:flex; gap:4px;">
-        <button class="icon-btn" onclick='openVjPhoneFormModal(${JSON.stringify(v).replace(/'/g,"&#39;")})'>${ICONS.edit}</button>
-        <button class="icon-btn" style="color:var(--coral);" onclick="confirmDeleteVjPhone(${v.rowIndex}, '${escapeHtml(v.vjName)}')">${ICONS.trash}</button>
+        <button class="icon-btn" onclick="openVjPhoneFormModalByRow(${v.rowIndex})">${ICONS.edit}</button>
+        <button class="icon-btn" style="color:var(--coral);" onclick="confirmDeleteVjPhoneByRow(${v.rowIndex})">${ICONS.trash}</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function openVjPhoneFormModal(v){
-  const isEdit = !!v;
-  v = v || {};
-  openModal(`
-    <div class="modal-head"><h3>${isEdit?'ແກ້ໄຂ VJ':'ເພີ່ມ VJ ໃໝ່'}</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <form id="vjPhoneForm">
-      <div class="field"><label>Bigo ID</label><input data-key="bigoId" type="text" value="${escapeHtml(v.bigoId||'')}"></div>
-      <div class="field"><label>ຊື່ VJ *</label><input data-key="vjName" type="text" value="${escapeHtml(v.vjName||'')}" required></div>
-      <div class="field"><label>ເບີໂທ *</label><input data-key="phone" type="tel" value="${escapeHtml(v.phone||'')}" required></div>
-    </form>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
-      <button class="btn btn-primary" onclick="submitVjPhoneForm(${isEdit?v.rowIndex:-1})">${ICONS.check} ບັນທຶກ</button>
-    </div>`);
+/* ອັບໂຫລດຮູບໃຫ້ VJ ໂດຍກົງຈາກໜ້ານີ້ */
+function quickUploadVjPhoto(bigoId){
+  if(!bigoId){ toast('VJ ຄົນນີ້ບໍ່ມີ Bigo ID — ໃສ່ Bigo ID ກ່ອນ','error'); return; }
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const file = inp.files[0]; if(!file) return;
+    if(!file.type.startsWith('image/')){ toast('ກະລຸນາເລືອກໄຟລ໌ຮູບ','error'); return; }
+    if(file.size > 8*1024*1024){ toast('ຮູບໃຫຍ່ເກີນ 8MB','error'); return; }
+    toast('ກຳລັງອັບໂຫລດຮູບ...','info');
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try{
+        const base64 = e.target.result.split(',')[1];
+        const up = await gasCall('adminUploadPhotoToDrive', State.adminPassword, base64, file.name, file.type);
+        await gasCall('adminSaveVjPhoto', State.adminPassword, bigoId, up.url);
+        if(!State.vjPhotos) State.vjPhotos = {};
+        State.vjPhotos[String(bigoId).trim().toLowerCase()] = up.url;
+        invalidatePhotoIndex();
+        toast('ບັນທຶກຮູບສຳເລັດ ✓','success');
+        const host = document.getElementById('vjPhoneList');
+        if(host) host.innerHTML = renderVjPhoneListInner();
+      }catch(err){ toast(err.message || 'ອັບໂຫລດບໍ່ສຳເລັດ','error'); }
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
 }
-async function submitVjPhoneForm(rowIndex){
-  const inputs = document.querySelectorAll('#vjPhoneForm [data-key]');
-  const payload = {};
-  inputs.forEach(inp => payload[inp.dataset.key] = inp.value.trim());
-  if(!payload.vjName || !payload.phone){ toast('ກະລຸນາປ້ອນຊື່ ແລະ ເບີໂທ','error'); return; }
-  if(rowIndex && rowIndex > 1) payload.rowIndex = rowIndex;
-  try{
-    await gasCall('adminSaveVjPhone', State.adminPassword, payload);
-    toast('ບັນທຶກສຳເລັດ','success');
-    closeModal();
-    _vjPhoneCache = null;
-    fetchVjPhoneList();
-  }catch(err){ toast(err.message || 'ບັນທຶກບໍ່ສຳເລັດ','error'); }
+
+/* ແກ້ປັນຫາຊື່ທີ່ມີ ' ເຮັດໃຫ້ onclick ພັງ: ສົ່ງ rowIndex ແທນ */
+function openVjPhoneFormModalByRow(rowIndex){
+  const v = (_vjPhoneCache||[]).find(x => x.rowIndex === rowIndex);
+  if(v) openVjPhoneFormModal(v);
 }
-function confirmDeleteVjPhone(rowIndex, name){
-  openModal(`
-    <div class="modal-head"><h3>ລຶບ VJ?</h3><button class="icon-btn" onclick="closeModal()">${ICONS.close}</button></div>
-    <p class="text-low">ລຶບ <b style="color:var(--text-hi);">${escapeHtml(name)}</b> ອອກຈາກລາຍຊື່ ເບີໂທ login ຖາວອນ.</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">ຍົກເລີກ</button>
-      <button class="btn btn-danger" onclick="submitDeleteVjPhone(${rowIndex})">${ICONS.trash} ລຶບເລີຍ</button>
-    </div>`);
+function confirmDeleteVjPhoneByRow(rowIndex){
+  const v = (_vjPhoneCache||[]).find(x => x.rowIndex === rowIndex);
+  if(v) confirmDeleteVjPhone(v.rowIndex, v.vjName);
 }
 async function submitDeleteVjPhone(rowIndex){
   try{

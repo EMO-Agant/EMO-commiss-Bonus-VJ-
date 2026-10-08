@@ -3552,14 +3552,14 @@ function vjLiveCardHtml(vj, rank) {
 
   // ແຖວເງື່ອນໄຂ (ພື້ນຖານ / Active)
   const reqRow = (title, ok, d, h, needD, needH, extra) => {
-    const dTxt = d ? `${d} ມື້ / ` : '';
+    const dTxt = d ? `📅 ${d} ມື້ / ` : '';
     const miss = [];
     if (!ok) {
       if (needD > 0) miss.push(`ຂາດ ${needD} ມື້`);
       if (needH > 0) miss.push(`ຂາດ ${needH.toFixed(1)} ຊ.ມ.`);
     }
     return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:6px 0;border-top:1px dashed var(--line);">
-      <span style="color:var(--text-mid);">${title}: ${dTxt}${h} ຊ.ມ.${extra||''}</span>
+      <span style="color:var(--text-mid);">${title}: ${dTxt}🕐 ${h} ຊ.ມ.${extra||''}</span>
       <span style="font-weight:700;color:${ok?'var(--mint)':'var(--coral)'};white-space:nowrap;">${ok?'✅ ຄົບ':('⚠️ '+(miss.join(' · ')||'ຍັງບໍ່ຄົບ'))}</span>
     </div>`;
   };

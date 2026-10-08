@@ -3740,6 +3740,9 @@ function renderCashBonus(){
   const data = _cashBonusCache || {list:[], totalNew:0, totalOld:0, totalAll:0};
   const newList = data.list.filter(v=>v.bonusType==='new' && v.met);
   const oldList = data.list.filter(v=>v.bonusType==='old' && v.met);
+  const failList = data.list
+    .filter(v => (v.bonusType==='new' || v.bonusType==='old') && !v.met && (v.sbeans>0 || v.validHour>0))
+    .sort((a,b)=> (b.validHour||0)-(a.validHour||0));
   function row(v){
     const purl = findPhotoUrlByBigoId(v.bigoId);
     return `
@@ -3782,7 +3785,21 @@ function renderCashBonus(){
     <div class="section-label">🏆 ວີເຈເກົ່າ Active (≥3 ເດືອນ) — ${oldList.length} ຄົນ</div>
     <div class="card" style="padding:8px;">
       ${oldList.length ? oldList.map(row).join('') : `<div class="empty-state" style="padding:24px;"><p>ບໍ່ມີວີເຈເກົ່າຮອດເງື່ອນໄຂ</p></div>`}
-    </div>`;
+    </div>
+    ${State.isAdmin ? `
+      <div class="section-label">⚠️ ຍັງບໍ່ຜ່ານເກນ (ສະເພາະ Admin) — ${failList.length} ຄົນ</div>
+      <div class="card" style="padding:8px;">
+        ${failList.length ? failList.map(v => `
+          <div class="vj-row">
+            <div class="vj-info">
+              <div class="name">${escapeHtml(v.bigoId)} <span class="text-low" style="font-size:11px;">(${v.bonusType==='new'?'ວີເຈໃໝ່':'ວີເຈເກົ່າ'} · ອາຍຸ ${v.monthsTenure} ເດືອນ)</span></div>
+              <div class="meta" style="display:block;">
+                <div>${BEAN_IMG_SM} ${fmtInt(v.sbeans)} · 📅 ${v.validDay} ມື້ · 🕐 ${v.validHour} ຊ.ມ.</div>
+                <div class="text-coral">${escapeHtml(v.reason||'')}</div>
+              </div>
+            </div>
+          </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>ທຸກຄົນຜ່ານເກນແລ້ວ</p></div>`}
+      </div>` : ''}`;
 }
 
 let _pkCache = null;

@@ -902,7 +902,6 @@ const USER_NAV = [
   { id:'home', label:'ໜ້າຫຼັກ', icon:'🏠'},
   { id:'bonus', label:'ໂບນັດ', icon:'💵'},
   { id:'livedata', label:'Live Data', icon:'🎯'},
-  { id:'newvjactive', label:'New VJ', icon:'🌟'},
   { id:'cashbonus', label:'ໂບເງິນສົດ', icon:'💰'},
   { id:'pk', label:'PK', icon:'<img src="https://i.postimg.cc/cJtHMpjn/icon-PK.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
   { id:'pkfamily', label:'PK Fam', icon:'<img src="https://i.postimg.cc/V67nf2bN/icon-Tofy.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">'},
@@ -1357,7 +1356,7 @@ function render(){
   renderShell();
   const main = document.getElementById('main');
   const titles = {
-    home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',newvjactive:'VJ ໃໝ່ Active',cashbonus:'ໂບນັດເງິນສົດ',
+    home:'ໜ້າຫຼັກ', bonus:'ໂບນັດຂອງຂ້ອຍ', livedata:'VJ Live Data',cashbonus:'ໂບນັດເງິນສົດ',
     leaderboard:'ອັນດັບ VJ',emo:'ນ້ອງ EMO',lookup:'ຄົ້ນຫາ VJ',
     pk:'PK Battle', pkfamily:'PK Family 3v3', 'admin-pk':'ຈັດການ PK', 'admin-pkfamily':'ຈັດການ PK Family', 'admin-vjphone':'ຈັດການເບີໂທ VJ', 'admin-manage-admins':'ຈັດການ Admin',
     'admin-login':'ເຂົ້າສູ່ລະບົບ Admin', 'admin-dashboard':'ພາບລວມ Admin',
@@ -1373,7 +1372,6 @@ function render(){
     case 'leaderboard': main.innerHTML = renderLeaderboard(); break;
     case 'lookup': main.innerHTML = renderLookup(); break;
     case 'livedata': main.innerHTML = renderVjLiveData(); break;
-    case 'newvjactive': main.innerHTML = renderNewVjActive(); break;
     case 'pk': main.innerHTML = renderPk(); break;
     case 'admin-pk': main.innerHTML = State.isAdmin ? renderAdminPk() : renderAdminLogin(); break;
     case 'pkfamily': main.innerHTML = renderPkFamily(); break;
@@ -1529,9 +1527,6 @@ async function bootApp(){
           _vjLiveCache = res.list; State.liveMonths = res.months; State.activeLiveMonth = res.month;
         }
       }).catch(()=>{}),
-      gasCall('getNewVjActiveData', null).then(res => {
-        if (res && !res.error) { _newVjActiveCache = res.list; }
-      }).catch(()=>{}),
     ]);
   } catch(err) {
     console.error('init error:', err);
@@ -1562,7 +1557,6 @@ async function refreshEverything(){
     _pkCache = null;
     _pkFamilyCache = null;
     _vjLiveCache = null; _vjLiveCacheByMonth = {};
-    _newVjActiveCache = null; _newVjActiveCacheByMonth = {};
     _cashBonusCache = null; _cashBonusCacheByMonth = {};
     _vjPhoneCache = null; _adminListCache = null; _emoKbCache = null;
     State.lookupHistory = null;
@@ -2143,6 +2137,8 @@ async function submitVjPhoneLogin(){
     if(res && res.ok){
       State.vjSession = { vjName: res.vjName, phone: res.phone, bigoId: res.bigoId };
       localStorage.setItem('emo_vj_session', JSON.stringify(State.vjSession));
+      State.myBigoId = res.bigoId;
+      localStorage.setItem('emo_my_bigoid', res.bigoId);
       document.body.classList.remove('pre-login');
       toast('ຍິນດີຕ້ອນຮັບ ' + res.vjName, 'success');
       bootApp();
@@ -2156,7 +2152,10 @@ async function submitVjPhoneLogin(){
   }
 }
 function vjSessionLogout(){
-  localStorage.removeItem('emo_vj_session');
+  ['emo_vj_session','emo_my_bigoid','emo_cache_months','emo_cache_monthsData',
+   'emo_cache_vjlive','emo_cache_pk','emo_cache_pkfamily','emo_recent_logins']
+   .forEach(k => localStorage.removeItem(k));
+  sessionStorage.removeItem('emo_admin_pw');
   location.reload();
 }
 
@@ -3430,7 +3429,7 @@ function renderVjLiveData() {
       <div id="vjLiveList">${liveListHtml(list)}</div>`;
   }
   const myId = State.myBigoId || '';
-  const liveSearchId = State._liveSearchId || '';
+  const liveSearchId = State._liveSearchId || (!State.isAdmin && State.myBigoId) || '';
   if (!liveSearchId) {
     return `
       <div class="page-head fade-in">
@@ -3691,137 +3690,6 @@ function vjLiveCardHtml(vj, rank) {
 
       <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:10.5px;color:var(--text-low);"><span>📅 ເລີ່ມ: ${escapeHtml(vj.startDate)}</span><span>⏳ ເຫຼືອ ${vj.daysLeft} ມື້</span></div>
     </div>`;
-}
-
-let _newVjActiveCache = null;
-let _newVjActiveCacheByMonth = {};   // ★ cache ແຍກຕາມແຕ່ລະເດືອນ
-let _newVjActiveLoading = false;
-
-async function fetchNewVjActiveData(monthKey, forceRefresh){
-  if(_newVjActiveLoading) return;
-  const cacheKey = monthKey || State.activeLiveMonth || '__latest__';
-
-  // ★ ຖ້າມີ cache ຂອງເດືອນນີ້ຢູ່ແລ້ວ ແລະ ບໍ່ໄດ້ບັງຄັບ refresh → ໃຊ້ທັນທີ
-  if(!forceRefresh && _newVjActiveCacheByMonth[cacheKey]){
-    _newVjActiveCache = _newVjActiveCacheByMonth[cacheKey].list;
-    if(_newVjActiveCacheByMonth[cacheKey].months) State.liveMonths = _newVjActiveCacheByMonth[cacheKey].months;
-    State.activeLiveMonth = _newVjActiveCacheByMonth[cacheKey].month || monthKey;
-    if(State.view === 'newvjactive'){ document.getElementById('main').innerHTML = renderNewVjActive(); afterRenderHook(); }
-    return;
-  }
-
-  if(!_newVjActiveCache){
-    try{ _newVjActiveCache = JSON.parse(localStorage.getItem('emo_cache_newvjactive') || 'null'); }catch(e){}
-    if(_newVjActiveCache && State.view === 'newvjactive'){
-      document.getElementById('main').innerHTML = renderNewVjActive();
-      afterRenderHook();
-    }
-  }
-  _newVjActiveLoading = true;
-  try{
-    const res = await gasCall('getNewVjActiveData', monthKey || State.activeLiveMonth || null);
-    if(res && !res.error){
-      _newVjActiveCache = Array.isArray(res.list) ? res.list : [];
-      _newVjActiveCacheByMonth[cacheKey] = { list: _newVjActiveCache, months: res.months, month: res.month }; // ★ ເກັບ cache
-      try{ localStorage.setItem('emo_cache_newvjactive', JSON.stringify(_newVjActiveCache)); }catch(e){}
-      if(Array.isArray(res.months) && res.months.length) State.liveMonths = res.months;
-      State.activeLiveMonth = res.month || State.activeLiveMonth;
-    } else if(!_newVjActiveCache){ toast((res&&res.error)||'ໂຫລດຂໍ້ມູນບໍ່ສຳເລັດ','error'); }
-  }catch(e){ if(!_newVjActiveCache){ toast(e.message || 'ໂຫລດຂໍ້ມູນບໍ່ສຳເລັດ','error'); } }
-  _newVjActiveLoading = false;
-  if(State.view === 'newvjactive'){ document.getElementById('main').innerHTML = renderNewVjActive(); afterRenderHook(); }
-}
-
-function switchNewVjActiveMonth(key){
-  State.activeLiveMonth = key;
-  render();                      // ★ chip ປ່ຽນ active ທັນທີ + ໂຊວ໌ cache/skeleton ທັນທີ
-  fetchNewVjActiveData(key);     // ຄ່ອຍ sync ຫຼັງບ້ານ
-}
-
-function newVjActiveStatusTableHtml(vj){
-  const rows = vj.supportMonthIndex === 1
-    ? [{days:5, hours:20},{days:10, hours:20}]
-    : [{days:20, hours:40},{days:30, hours:60}];
-  return `
-    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:10px;">
-      <thead>
-        <tr style="background:var(--ink);">
-          <th style="padding:6px;text-align:left;color:var(--text-low);">📆 ວັນ / ຊົ່ວໂມງ</th>
-          <th style="padding:6px;text-align:center;color:var(--text-low);">0≥2,000 ຖົ່ວ</th>
-          <th style="padding:6px;text-align:center;color:var(--text-low);">2,000≥10,000 ຖົ່ວ</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(r=>{
-          const hoursOk = (vj.hoursMonth||0) >= r.hours;
-          const daysOk  = vj.hasDayData ? ((vj.validDay||0) >= r.days) : true; // ★ ແກ້ໃຫ້ຖືກ
-          const passed  = daysOk && hoursOk;
-          const status  = passed
-              ? `<span style="color:var(--mint);font-weight:700;">✅ ຜ່ານ</span>`
-              : `<span style="color:var(--coral);font-weight:700;">⚠️ ຍັງບໍ່ຜ່ານ</span>`;
-          return `<tr style="border-top:1px solid var(--line);">
-            <td style="padding:6px;">📅 ${r.days} ມື້ / 🕐 ${r.hours} ຊ.ມ.${vj.hasDayData?'':' *'}</td>
-            <td style="padding:6px;text-align:center;">${status}</td>
-            <td style="padding:6px;text-align:center;">${status}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    ${!vj.hasDayData ? `<div style="font-size:10px;color:var(--text-low);margin-top:4px;">* ຍັງບໍ່ມີຂໍ້ມູນ "ວັນ" ໃນຊີດຄອມມິດຊັ່ນເດືອນນີ້ — ລະບົບຄິດຈາກຊົ່ວໂມງ Live ຢ່າງດຽວ</div>` : ''}`;
-}
-
-function renderNewVjActive(){
-  if(!_newVjActiveCache && !_newVjActiveLoading){ fetchNewVjActiveData(); return skeletonHtml(); }
-  if(_newVjActiveLoading && !_newVjActiveCache) return skeletonHtml();
-  const list = _newVjActiveCache || [];
-  const totalBonus = list.reduce((a,v)=>a+(v.bonus||0),0);
-  const metCount = list.filter(v=>v.met).length;
-  return `
-    <div class="page-head fade-in">
-      <p class="eyebrow">Live Data</p>
-      <h1>🌟 ໂບນັດ Active VJ ໃໝ່</h1>
-      <p>VJ ໃໝ່ (2 ເດືອນທຳອິດ) — ${list.length} ຄົນ${State.activeLiveMonth?(' · '+escapeHtml((State.liveMonths.find(m=>m.key===State.activeLiveMonth)||{}).label||'')):''}</p>
-    </div>
-    ${State.liveMonths && State.liveMonths.length ? `<div class="chip-row">${State.liveMonths.map(m => `<button class="chip ${m.key===State.activeLiveMonth?'active':''}" onclick="switchNewVjActiveMonth('${m.key}')">${escapeHtml(m.label)}</button>`).join('')}</div>` : ''}
-    ${State.isAdmin ? `<div class="stat-grid" style="margin-bottom:14px;"><div class="stat-card"><div class="l">VJ ໃໝ່ທັງໝົດ</div><div class="v">${list.length}</div></div><div class="stat-card"><div class="l">ຮອດເງື່ອນໄຂ</div><div class="v mint">${metCount}</div></div><div class="stat-card"><div class="l">Beans ໂບນັດລວມ</div><div class="v gold">${fmtInt(totalBonus)}</div></div></div>` : ''}
-    <div class="search-bar" style="margin-bottom:10px;">
-      ${ICONS.search}
-      <input id="vjSearchInput" type="text" placeholder="ຄົ້ນຫາ Bigo ID ຫຼື ຊື່..." value="${escapeHtml(State.searchQuery)}" oninput="State.searchQuery=this.value; document.getElementById('newVjActiveList').innerHTML = renderNewVjActiveListInner();">
-      <button class="btn btn-ghost btn-refresh" title="Refresh" onclick="fetchNewVjActiveData(State.activeLiveMonth, true); toast('ກຳລັງ Refresh...','info');">${ICONS.sync}</button>
-    </div>
-    <div id="newVjActiveList">${renderNewVjActiveListInner()}</div>`;
-}
-function renderNewVjActiveListInner(){
-  const list = _newVjActiveCache || [];
-  const q = (State.searchQuery||'').trim().toLowerCase();
-  const filtered = q ? list.filter(v => String(v.bigoId).toLowerCase().includes(q) || (v.vjName||'').toLowerCase().includes(q)) : list;
-  if(!filtered.length) return `<div class="empty-state"><p>ບໍ່ພົບ VJ ໃໝ່</p></div>`;
-
-  const sorted = filtered.slice().sort((a,b)=>{
-    // 1) ຜ່ານເກນ (met=true) ຂຶ້ນກ່ອນສະເໝີ
-    if(a.met !== b.met) return a.met ? -1 : 1;
-    // 2) ຖ້າຜ່ານທັງຄູ່ ຫຼື ບໍ່ຜ່ານທັງຄູ່ → ຮຽງຕາມຖົ່ວ ຫຼາຍ→ໜ້ອຍ
-    const beansDiff = (b.beansMonth||0) - (a.beansMonth||0);
-    if(beansDiff !== 0) return beansDiff;
-    // 3) ຖ້າຖົ່ວເທົ່າກັນ → ຮຽງຕາມຊົ່ວໂມງ ຫຼາຍ→ໜ້ອຍ
-    return (b.hoursMonth||0) - (a.hoursMonth||0);
-  });
-
-  return sorted.map(vj => `
-    <div class="card" style="margin-bottom:10px; padding:14px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <div class="vj-avatar" style="overflow:hidden;">${(() => { const purl = findPhotoUrlByBigoId(vj.bigoId); return purl ? `<img src="${escapeHtml(purl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;">${initials(vj.bigoId)}</span>` : initials(vj.bigoId); })()}</div>
-        <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">${escapeHtml(vj.vjName||vj.bigoId)}</div><div style="font-size:11.5px;color:var(--text-low);">${escapeHtml(vj.bigoId)} ·📆 ເດືອນທີ ${vj.supportMonthIndex} ຂອງການສະໜັບສະໜູນ</div></div>
-        <span style="background:${vj.met?'rgba(45,212,168,0.15)':'rgba(255,107,94,0.12)'};color:${vj.met?'var(--mint)':'var(--coral)'};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${vj.met?'✅ ຜ່ານ':'⚠️ ຍັງບໍ່ຜ່ານ'}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.beansMonth)}</div><div style="font-size:10px;color:var(--text-low);">ຖົ່ວປັດຈຸບັນ</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;">${(vj.hoursMonth||0).toFixed(1)}h</div><div style="font-size:10px;color:var(--text-low);"> 🕐 ຊົ່ວໂມງ</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;">${vj.hasDayData ? (vj.validDay||0) : '—'}</div><div style="font-size:10px;color:var(--text-low);">📅 ວັນ${vj.hasDayData?'':' (ອີງໃສ່ ຊ.ມ.)'}</div></div>
-        <div style="background:var(--ink);border-radius:10px;padding:8px;text-align:center;"><div style="font-family:var(--f-mono);font-size:20px;font-weight:800;color:var(--mint);display:flex;align-items:center;justify-content:center;gap:4px;">${BEAN_IMG_SM}${fmtInt(vj.bonus)}</div><div style="font-size:10px;color:var(--text-low);">ໂບນັດຖົ່ວ</div></div>
-      </div>
-      ${newVjActiveStatusTableHtml(vj)}
-    </div>`).join('');
 }
 
 let _cashBonusCache = null;

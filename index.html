@@ -3567,24 +3567,56 @@ function vjLiveCardHtml(vj, rank) {
   const noDayNote = (vj.reqGate && !vj.hasDayData)
     ? `<div style="font-size:10px;color:var(--text-low);margin-top:4px;">* ຍັງບໍ່ມີຂໍ້ມູນ "ມື້" ໃນຊີດຄອມມິດຊັ່ນເດືອນນີ້ — ລະບົບຄິດຈາກຊົ່ວໂມງຢ່າງດຽວ</div>` : '';
 
-  // ກ່ອງໂບນັດ
+  // ກ່ອງໂບນັດ — ໃຫຍ່ເດັ່ນ (ຂຽວ = ຄົບເກນ, ສົ້ມ = ຍັງບໍ່ຄົບເກນ)
+  const C_OK = '#16a34a', C_WARN = '#ea580c', C_MUTED = '#8A7A60';
+  const heroBox = (color, bg, label, amount, sub, note, extraHtml) => `
+    <div style="margin-top:10px;background:${bg};border:2px solid ${color};border-radius:16px;padding:14px 14px 12px;text-align:center;box-shadow:0 6px 22px ${color}33;">
+      <div style="font-size:12px;font-weight:700;color:${color};letter-spacing:.3px;">${label}</div>
+      <div style="font-family:var(--f-mono);font-weight:800;font-size:36px;line-height:1.15;color:${color};margin:6px 0 2px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+        ${BEAN_IMG_MD}<span>${amount}</span><span style="font-size:16px;font-weight:700;">ຖົ່ວ</span>
+      </div>
+      ${sub ? `<div style="font-family:var(--f-mono);font-weight:800;font-size:15px;color:${color};">${sub}</div>` : ''}
+      ${note ? `<div style="font-size:11.5px;font-weight:600;color:${color};margin-top:7px;line-height:1.55;">${note}</div>` : ''}
+      ${extraHtml || ''}
+    </div>`;
+
+  // ຂໍ້ຄວາມບອກວ່າຂາດຫຍັງ ສຳລັບໂບນັດພື້ນຖານ
+  const baseMissing = [];
+  if (vj.needBaseDays > 0) baseMissing.push(`${vj.needBaseDays} ມື້`);
+  if (vj.needBaseHours > 0) baseMissing.push(`${Number(vj.needBaseHours).toFixed(1)} ຊ.ມ.`);
+
   let bonusBox = '';
   if (vj.currentBonus > 0) {
-    const pctTxt = vj.bonusIsPercent ? ` — ${Math.round((vj.bonusPercent||0)*100)}%` : '';
-    bonusBox = `<div style="background:rgba(245,184,46,0.08);border:1px solid rgba(245,184,46,0.25);border-radius:10px;padding:8px 10px;margin-top:8px;">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-mid);"><span>🎁 ພື້ນຖານ (${escapeHtml(vj.currentGrade)})${pctTxt}</span><span class="mono">${fmtInt(vj.baseBonus)}</span></div>
-      ${vj.activeBonus > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-mid);margin-top:3px;"><span>⭐ Active</span><span class="mono">+${fmtInt(vj.activeBonus)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(245,184,46,0.25);">
-        <span style="font-size:12px;font-weight:700;">ລວມໂບນັດທີ່ຈະໄດ້</span>
-        <span style="font-family:var(--f-mono);font-weight:800;color:var(--gold);font-size:15px;">${fmtInt(vj.currentBonus)} ຖົ່ວ</span>
-      </div>
-    </div>`;
+    // ✅ ຄົບເກນພື້ນຖານແລ້ວ → ສີຂຽວ
+    const pctTxt = vj.bonusIsPercent ? ` ${Math.round((vj.bonusPercent||0)*100)}%` : '';
+    const sub = vj.activeBonus > 0
+      ? `(ພື້ນຖານ ${fmtInt(vj.baseBonus)}${pctTxt} + Active ${fmtInt(vj.activeBonus)})`
+      : `(ພື້ນຖານ ${fmtInt(vj.baseBonus)}${pctTxt})`;
+    // ຄົບພື້ນຖານ ແຕ່ Active ຍັງບໍ່ຄົບ → ໃສ່ແຖວສົ້ມຢູ່ລຸ່ມ
+    let extra = '';
+    if (vj.potentialActive > 0 && !vj.activeMet) {
+      const am = [];
+      if (vj.needActiveDays > 0) am.push(`${vj.needActiveDays} ມື້`);
+      if (vj.needActiveHours > 0) am.push(`${Number(vj.needActiveHours).toFixed(1)} ຊ.ມ.`);
+      extra = `<div style="margin-top:8px;padding:6px 10px;border-radius:10px;background:rgba(234,88,12,0.10);color:${C_WARN};font-size:11.5px;font-weight:700;">
+        ⭐ ຖ້າຄົບ Active (${vj.reqActiveDays} ມື້ / ${vj.reqActiveHours} ຊ.ມ.) ຈະໄດ້ເພີ່ມ +${fmtInt(vj.potentialActive)} ຖົ່ວ${am.length ? ' — ຂາດ ' + am.join(' · ') : ''}</div>`;
+    }
+    bonusBox = heroBox(C_OK, 'linear-gradient(160deg,rgba(22,163,74,0.14),rgba(22,163,74,0.05))',
+      `🎁 ໂບນັດທີ່ຈະໄດ້ (${escapeHtml(vj.currentGrade)})`,
+      fmtInt(vj.currentBonus), sub, '✅ ຄົບເງື່ອນໄຂແລ້ວ', extra);
   } else if (vj.gradeReached) {
-    bonusBox = `<div style="background:rgba(255,107,94,0.06);border:1px solid rgba(255,107,94,0.2);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:12px;color:var(--text-low);">
-      ຖົ່ວຮອດ ${escapeHtml(vj.currentGrade)} ແລ້ວ ແຕ່ຍັງບໍ່ຄົບເງື່ອນໄຂມື້/ຊົ່ວໂມງ ຈຶ່ງຍັງບໍ່ໄດ້ໂບນັດ —
-      ຖ້າຄົບ ຈະໄດ້ <b class="mono" style="color:var(--gold);">${fmtInt(vj.potentialBase)}</b> ຖົ່ວ${vj.potentialActive>0?` (+ Active ${fmtInt(vj.potentialActive)})`:''}</div>`;
+    // ⚠️ ຖົ່ວຮອດ Grade ແຕ່ມື້/ຊົ່ວໂມງຍັງບໍ່ຄົບ → ສີສົ້ມ
+    const pctTxt = vj.bonusIsPercent ? ` ${Math.round((vj.bonusPercent||0)*100)}%` : '';
+    const sub = vj.potentialActive > 0 ? `(+ Active ${fmtInt(vj.potentialActive)})` : '';
+    const note = `⚠️ ຖົ່ວຮອດ ${escapeHtml(vj.currentGrade)}${pctTxt} ແລ້ວ ແຕ່ຍັງບໍ່ຄົບເງື່ອນໄຂມື້/ຊົ່ວໂມງ ຈຶ່ງຍັງບໍ່ໄດ້ໂບນັດ`
+      + (baseMissing.length ? `<br>ຍັງຂາດ ${baseMissing.join(' · ')} ເພື່ອໃຫ້ຄົບເກນ (${vj.reqBaseDays ? vj.reqBaseDays + ' ມື້ / ' : ''}${vj.reqBaseHours} ຊ.ມ.)` : '');
+    bonusBox = heroBox(C_WARN, 'linear-gradient(160deg,rgba(234,88,12,0.14),rgba(234,88,12,0.05))',
+      `🎯 ຈະໄດ້ໂບນັດ ຖ້າເຮັດຄົບເກນ (${escapeHtml(vj.currentGrade)})`,
+      fmtInt(vj.potentialBase), sub, note, '');
   } else {
-    bonusBox = `<div style="background:rgba(255,107,94,0.06);border:1px solid rgba(255,107,94,0.2);border-radius:10px;padding:8px 10px;margin-top:8px;"><span style="font-size:12px;color:var(--text-low);">ຍັງບໍ່ຮອດ Grade ທຳອິດ — ຕ້ອງການ ${fmtInt(vj.needBeans)} ຖົ່ວ ອີກ (${escapeHtml(vj.nextGrade)})</span></div>`;
+    // ຍັງບໍ່ຮອດ Grade ທຳອິດ → ສີເທົາ
+    bonusBox = `<div style="margin-top:10px;border:2px dashed var(--line);border-radius:16px;padding:12px 14px;text-align:center;font-size:12.5px;color:${C_MUTED};">
+      ຍັງບໍ່ຮອດ Grade ທຳອິດ — ຕ້ອງການອີກ <b class="mono" style="color:var(--gold);">${fmtInt(vj.needBeans)}</b> ຖົ່ວ (${escapeHtml(vj.nextGrade)})</div>`;
   }
 
   const purl = findPhotoUrlByBigoId(vj.bigoId);
